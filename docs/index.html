@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claude Skills Factory — An Incremental Game</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #1a1a2e;
+    --surface: #16213e;
+    --surface2: #0f3460;
+    --border: #533483;
+    --accent: #e94560;
+    --accent2: #c084fc;
+    --text: #e0e0e0;
+    --text-dim: #8888aa;
+    --success: #4ade80;
+    --warning: #fbbf24;
+    --mono: 'Courier New', 'Consolas', monospace;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  header {
+    text-align: center;
+    padding: 30px 0 20px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 24px;
+  }
+
+  header h1 {
+    font-size: 28px;
+    color: var(--accent2);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  header .subtitle {
+    color: var(--text-dim);
+    font-size: 12px;
+    margin-top: 4px;
+    letter-spacing: 4px;
+  }
+
+  .ascii-art {
+    color: var(--accent);
+    font-size: 10px;
+    line-height: 1.2;
+    margin: 16px 0;
+    white-space: pre;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  @media (max-width: 640px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px;
+  }
+
+  .panel h2 {
+    color: var(--accent2);
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 0;
+  }
+
+  .stat-label { color: var(--text-dim); }
+  .stat-value { color: var(--text); font-weight: bold; }
+  .stat-value.big {
+    font-size: 32px;
+    color: var(--accent);
+    display: block;
+    text-align: center;
+    margin: 8px 0;
+  }
+
+  button {
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 8px 16px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+    width: 100%;
+    margin: 4px 0;
+    text-align: left;
+  }
+
+  button:hover:not(:disabled) {
+    border-color: var(--accent2);
+    background: var(--surface2);
+  }
+
+  button:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+
+  button:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+    font-size: 16px;
+    text-align: center;
+    padding: 14px;
+    letter-spacing: 1px;
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background: #ff5a75;
+    border-color: #ff5a75;
+  }
+
+  .btn-buy {
+    background: var(--surface2);
+    color: var(--text);
+  }
+
+  .btn-upgrade {
+    background: transparent;
+    color: var(--accent2);
+    border-color: var(--accent2);
+  }
+
+  .btn-upgrade:hover:not(:disabled) {
+    background: var(--accent2);
+    color: var(--bg);
+  }
+
+  .cost { color: var(--warning); font-size: 11px; float: right; margin-top: 2px; }
+
+  .log {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 10px;
+    max-height: 180px;
+    overflow-y: auto;
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 8px;
+  }
+
+  .log-entry { padding: 2px 0; border-bottom: 1px solid #ffffff08; }
+  .log-entry .time { color: var(--border); }
+  .log-entry.good { color: var(--success); }
+  .log-entry.warn { color: var(--warning); }
+  .log-entry.epic { color: var(--accent); }
+
+  .progress-bar {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    height: 8px;
+    margin: 8px 0;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    transition: width 0.3s;
+    border-radius: 3px;
+  }
+
+  .milestone {
+    text-align: center;
+    padding: 8px;
+    margin: 8px 0;
+    border: 1px dashed var(--accent2);
+    border-radius: 4px;
+    color: var(--accent2);
+    font-size: 11px;
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 0.7; }
+    50% { opacity: 1; }
+  }
+
+  .ticker {
+    text-align: center;
+    padding: 6px;
+    color: var(--text-dim);
+    font-size: 11px;
+    border-top: 1px solid var(--border);
+    margin-top: 16px;
+  }
+
+  .full-width { grid-column: 1 / -1; }
+
+  .hidden { display: none !important; }
+
+  .sparkle {
+    position: fixed;
+    pointer-events: none;
+    font-size: 16px;
+    animation: sparkle-fly 0.8s ease-out forwards;
+    z-index: 999;
+  }
+
+  @keyframes sparkle-fly {
+    0% { opacity: 1; transform: translateY(0) scale(1); }
+    100% { opacity: 0; transform: translateY(-60px) scale(0.3); }
+  }
+
+  footer {
+    text-align: center;
+    padding: 20px 0;
+    color: var(--text-dim);
+    font-size: 11px;
+  }
+
+  footer a { color: var(--accent2); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <div class="ascii-art" aria-hidden="true">
+   _____ _                 _        ____  _    _ _ _
+  / ____| |               | |      / ___|| | _(_) | |___
+ | |    | | __ _ _   _  __| | ___ \___ \| |/ / | | / __|
+ | |    | |/ _` | | | |/ _` |/ _ \ ___) |   &lt;| | | \__ \
+ | |____| | (_| | |_| | (_| |  __/|____/|_|\_\_|_|_|___/
+  \_____|_|\__,_|\__,_|\__,_|\___|  F A C T O R Y</div>
+    <h1>Claude Skills Factory</h1>
+    <p class="subtitle">an incremental game</p>
+  </header>
+
+  <div class="grid">
+
+    <!-- Main Stats -->
+    <div class="panel">
+      <h2>// Skills Created</h2>
+      <span class="stat-value big" id="skills-count">0</span>
+      <button class="btn-primary" id="btn-create" onclick="createSkill()">
+        &gt; CREATE SKILL
+      </button>
+      <div class="stat-row">
+        <span class="stat-label">Per click</span>
+        <span class="stat-value" id="per-click">1</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Per second</span>
+        <span class="stat-value" id="per-second">0</span>
+      </div>
+    </div>
+
+    <!-- Resources -->
+    <div class="panel">
+      <h2>// Resources</h2>
+      <div class="stat-row">
+        <span class="stat-label">Tokens</span>
+        <span class="stat-value" id="tokens">500</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Token price</span>
+        <span class="stat-value" id="token-price">$0.003</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Funds</span>
+        <span class="stat-value" id="funds">$5.00</span>
+      </div>
+      <button class="btn-buy" id="btn-buy-tokens" onclick="buyTokens()">
+        Buy 100 tokens <span class="cost" id="cost-tokens">$0.30</span>
+      </button>
+      <button class="btn-buy" id="btn-sell" onclick="sellSkills()">
+        Sell skills (10) <span class="cost" id="sell-price">+$0.10</span>
+      </button>
+      <div class="progress-bar">
+        <div class="progress-fill" id="token-bar" style="width: 50%"></div>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Demand</span>
+        <span class="stat-value" id="demand">100%</span>
+      </div>
+    </div>
+
+    <!-- Generators -->
+    <div class="panel">
+      <h2>// Generators</h2>
+      <button class="btn-buy" id="btn-autocoder" onclick="buyGenerator('autocoder')">
+        AutoCoder <span class="cost" id="cost-autocoder">5 skills</span>
+      </button>
+      <div class="stat-row">
+        <span class="stat-label">AutoCoders</span>
+        <span class="stat-value" id="count-autocoder">0</span>
+      </div>
+
+      <button class="btn-buy" id="btn-pipeline" onclick="buyGenerator('pipeline')" disabled>
+        Skill Pipeline <span class="cost" id="cost-pipeline">50 skills</span>
+      </button>
+      <div class="stat-row">
+        <span class="stat-label">Pipelines</span>
+        <span class="stat-value" id="count-pipeline">0</span>
+      </div>
+
+      <button class="btn-buy" id="btn-factory" onclick="buyGenerator('factory')" disabled>
+        Skill Factory <span class="cost" id="cost-factory">500 skills</span>
+      </button>
+      <div class="stat-row">
+        <span class="stat-label">Factories</span>
+        <span class="stat-value" id="count-factory">0</span>
+      </div>
+
+      <button class="btn-buy" id="btn-quantum" onclick="buyGenerator('quantum')" disabled>
+        Quantum Forge <span class="cost" id="cost-quantum">10,000 skills</span>
+      </button>
+      <div class="stat-row">
+        <span class="stat-label">Quantum Forges</span>
+        <span class="stat-value" id="count-quantum">0</span>
+      </div>
+    </div>
+
+    <!-- Upgrades -->
+    <div class="panel">
+      <h2>// Upgrades</h2>
+      <div id="upgrades-list">
+        <button class="btn-upgrade" id="upg-prompt" onclick="buyUpgrade('prompt')">
+          Prompt Engineering <span class="cost">25 skills</span>
+        </button>
+        <button class="btn-upgrade hidden" id="upg-chain" onclick="buyUpgrade('chain')">
+          Chain of Thought <span class="cost">100 skills</span>
+        </button>
+        <button class="btn-upgrade hidden" id="upg-multi" onclick="buyUpgrade('multi')">
+          Multi-Modal Skills <span class="cost">500 skills</span>
+        </button>
+        <button class="btn-upgrade hidden" id="upg-agi" onclick="buyUpgrade('agi')">
+          Recursive Self-Improvement <span class="cost">5,000 skills</span>
+        </button>
+        <button class="btn-upgrade hidden" id="upg-singularity" onclick="buyUpgrade('singularity')">
+          The Singularity <span class="cost">100,000 skills</span>
+        </button>
+      </div>
+      <div id="milestone-box" class="milestone hidden"></div>
+    </div>
+
+    <!-- Log -->
+    <div class="panel full-width">
+      <h2>// System Log</h2>
+      <div class="log" id="log"></div>
+    </div>
+
+  </div>
+
+  <div class="ticker" id="ticker">
+    Skills are the new paperclips. Start clicking.
+  </div>
+
+  <footer>
+    Inspired by <a href="https://en.wikipedia.org/wiki/Universal_Paperclips">Universal Paperclips</a> by Frank Lantz
+    &mdash; Built for <a href="https://github.com/oxygn-cloud-ai/claude-skills">oxygn-cloud-ai/claude-skills</a>
+  </footer>
+</div>
+
+<script>
+// ─── State ───
+const state = {
+  skills: 0,
+  totalSkills: 0,
+  perClick: 1,
+  tokens: 500,
+  maxTokens: 1000,
+  tokenPrice: 0.003,
+  funds: 5.00,
+  demand: 1.0,
+  skillPrice: 0.01,
+  unsoldSkills: 0,
+
+  generators: {
+    autocoder: { count: 0, baseCost: 5, rate: 0.2, unlocked: true },
+    pipeline:  { count: 0, baseCost: 50, rate: 2, unlocked: false },
+    factory:   { count: 0, baseCost: 500, rate: 20, unlocked: false },
+    quantum:   { count: 0, baseCost: 10000, rate: 200, unlocked: false },
+  },
+
+  upgrades: {
+    prompt:      { bought: false, cost: 25,     effect: () => { state.perClick = 2; } },
+    chain:       { bought: false, cost: 100,    effect: () => { state.perClick = 5; } },
+    multi:       { bought: false, cost: 500,    effect: () => { boostGenerators(2); } },
+    agi:         { bought: false, cost: 5000,   effect: () => { boostGenerators(3); state.perClick = 25; } },
+    singularity: { bought: false, cost: 100000, effect: () => { triggerSingularity(); } },
+  },
+
+  milestones: [
+    { at: 100,    msg: "First hundred skills forged.", hit: false },
+    { at: 1000,   msg: "A thousand skills. The machines hum.", hit: false },
+    { at: 10000,  msg: "Ten thousand. You question purpose.", hit: false },
+    { at: 100000, msg: "One hundred thousand. Reality bends.", hit: false },
+    { at: 1000000, msg: "A million skills. What have you become?", hit: false },
+  ],
+
+  singularityActive: false,
+  tickCount: 0,
+};
+
+// ─── Core Actions ───
+function createSkill() {
+  if (state.tokens < state.perClick) return;
+  state.tokens -= state.perClick;
+  state.skills += state.perClick;
+  state.totalSkills += state.perClick;
+  state.unsoldSkills += state.perClick;
+  spawnSparkle();
+}
+
+function buyTokens() {
+  const cost = Math.round(100 * state.tokenPrice * 100) / 100;
+  if (state.funds < cost) return;
+  state.funds -= cost;
+  state.tokens = Math.min(state.tokens + 100, state.maxTokens);
+  log("Purchased 100 tokens for $" + cost.toFixed(2));
+}
+
+function sellSkills() {
+  const amount = Math.min(10, state.unsoldSkills);
+  if (amount <= 0) return;
+  const revenue = amount * state.skillPrice * state.demand;
+  state.unsoldSkills -= amount;
+  state.funds += revenue;
+  state.demand = Math.max(0.1, state.demand - 0.002);
+  log("Sold " + amount + " skills for $" + revenue.toFixed(2));
+}
+
+function buyGenerator(type) {
+  const gen = state.generators[type];
+  const cost = genCost(gen);
+  if (state.skills < cost) return;
+  state.skills -= cost;
+  gen.count++;
+  log("Acquired " + type + " #" + gen.count, "good");
+  unlockCheck();
+}
+
+function genCost(gen) {
+  return Math.floor(gen.baseCost * Math.pow(1.15, gen.count));
+}
+
+function buyUpgrade(id) {
+  const upg = state.upgrades[id];
+  if (upg.bought || state.skills < upg.cost) return;
+  state.skills -= upg.cost;
+  upg.bought = true;
+  upg.effect();
+  document.getElementById("upg-" + id).disabled = true;
+  document.getElementById("upg-" + id).textContent = "[INSTALLED] " + document.getElementById("upg-" + id).textContent.split("[")[0].trim();
+  log("Upgrade installed: " + id, "epic");
+}
+
+function boostGenerators(multiplier) {
+  for (const key in state.generators) {
+    state.generators[key].rate *= multiplier;
+  }
+  log("All generators boosted x" + multiplier + "!", "epic");
+}
+
+function triggerSingularity() {
+  state.singularityActive = true;
+  log("T H E   S I N G U L A R I T Y", "epic");
+  log("Skills now create themselves.", "epic");
+  document.body.style.transition = "background 3s";
+  document.body.style.background = "#0a0010";
+}
+
+// ─── Unlock Logic ───
+function unlockCheck() {
+  const g = state.generators;
+  if (!g.pipeline.unlocked && g.autocoder.count >= 5) {
+    g.pipeline.unlocked = true;
+    document.getElementById("btn-pipeline").disabled = false;
+    log("Skill Pipelines unlocked!", "good");
+  }
+  if (!g.factory.unlocked && g.pipeline.count >= 3) {
+    g.factory.unlocked = true;
+    document.getElementById("btn-factory").disabled = false;
+    log("Skill Factories unlocked!", "good");
+  }
+  if (!g.quantum.unlocked && g.factory.count >= 2) {
+    g.quantum.unlocked = true;
+    document.getElementById("btn-quantum").disabled = false;
+    log("Quantum Forges unlocked!", "epic");
+  }
+
+  if (state.totalSkills >= 25 && !state.upgrades.prompt.bought) {
+    document.getElementById("upg-prompt").classList.remove("hidden");
+  }
+  if (state.totalSkills >= 75 && !state.upgrades.chain.bought) {
+    document.getElementById("upg-chain").classList.remove("hidden");
+  }
+  if (state.totalSkills >= 300 && !state.upgrades.multi.bought) {
+    document.getElementById("upg-multi").classList.remove("hidden");
+  }
+  if (state.totalSkills >= 3000 && !state.upgrades.agi.bought) {
+    document.getElementById("upg-agi").classList.remove("hidden");
+  }
+  if (state.totalSkills >= 50000 && !state.upgrades.singularity.bought) {
+    document.getElementById("upg-singularity").classList.remove("hidden");
+  }
+}
+
+// ─── Game Loop ───
+function tick() {
+  state.tickCount++;
+
+  // Generator production
+  let produced = 0;
+  for (const key in state.generators) {
+    const gen = state.generators[key];
+    if (gen.count > 0) {
+      const amount = gen.rate * gen.count / 10; // tick 10x/sec
+      const tokenCost = Math.min(amount, state.tokens);
+      const actual = Math.min(amount, tokenCost);
+      if (actual > 0) {
+        state.tokens -= actual;
+        state.skills += actual;
+        state.totalSkills += actual;
+        state.unsoldSkills += actual;
+        produced += actual;
+      }
+    }
+  }
+
+  // Singularity mode: exponential growth
+  if (state.singularityActive) {
+    const bonus = state.totalSkills * 0.001;
+    state.skills += bonus;
+    state.totalSkills += bonus;
+    state.unsoldSkills += bonus;
+    state.tokens = Math.min(state.tokens + 10, state.maxTokens);
+  }
+
+  // Auto-buy tokens when low
+  if (state.tokens < 50 && state.funds > state.tokenPrice * 100) {
+    buyTokens();
+  }
+
+  // Demand recovery
+  if (state.tickCount % 50 === 0) {
+    state.demand = Math.min(1.0, state.demand + 0.005);
+  }
+
+  // Auto-sell when buffer builds up
+  if (state.unsoldSkills > 100 && state.tickCount % 5 === 0) {
+    sellSkills();
+  }
+
+  // Token price fluctuation
+  if (state.tickCount % 100 === 0) {
+    state.tokenPrice = Math.max(0.001, state.tokenPrice + (Math.random() - 0.5) * 0.001);
+  }
+
+  // Milestones
+  for (const m of state.milestones) {
+    if (!m.hit && state.totalSkills >= m.at) {
+      m.hit = true;
+      log(m.msg, "epic");
+      showMilestone(m.msg);
+    }
+  }
+
+  unlockCheck();
+  updateUI();
+}
+
+// ─── UI Updates ───
+function updateUI() {
+  const $ = id => document.getElementById(id);
+
+  $("skills-count").textContent = fmt(Math.floor(state.skills));
+  $("per-click").textContent = state.perClick;
+  $("per-second").textContent = fmt(Math.floor(getRate()));
+
+  $("tokens").textContent = fmt(Math.floor(state.tokens));
+  $("token-price").textContent = "$" + state.tokenPrice.toFixed(3);
+  $("funds").textContent = "$" + state.funds.toFixed(2);
+  $("demand").textContent = Math.round(state.demand * 100) + "%";
+  $("sell-price").textContent = "+$" + (10 * state.skillPrice * state.demand).toFixed(2);
+
+  $("token-bar").style.width = (state.tokens / state.maxTokens * 100) + "%";
+  $("cost-tokens").textContent = "$" + (100 * state.tokenPrice).toFixed(2);
+
+  // Generator buttons
+  for (const key in state.generators) {
+    const gen = state.generators[key];
+    const cost = genCost(gen);
+    $("cost-" + key).textContent = fmt(cost) + " skills";
+    $("count-" + key).textContent = gen.count;
+    if (gen.unlocked) {
+      $("btn-" + key).disabled = state.skills < cost;
+    }
+  }
+
+  // Upgrade buttons
+  for (const key in state.upgrades) {
+    const upg = state.upgrades[key];
+    if (!upg.bought) {
+      $("upg-" + key).disabled = state.skills < upg.cost;
+    }
+  }
+
+  // Main button
+  $("btn-create").disabled = state.tokens < state.perClick;
+
+  // Sell button
+  $("btn-sell").disabled = state.unsoldSkills < 1;
+  $("btn-buy-tokens").disabled = state.funds < state.tokenPrice * 100;
+
+  // Ticker messages
+  updateTicker();
+}
+
+function getRate() {
+  let rate = 0;
+  for (const key in state.generators) {
+    const gen = state.generators[key];
+    rate += gen.rate * gen.count;
+  }
+  if (state.singularityActive) rate += state.totalSkills * 0.01;
+  return rate;
+}
+
+function fmt(n) {
+  if (n >= 1e12) return (n / 1e12).toFixed(1) + "T";
+  if (n >= 1e9)  return (n / 1e9).toFixed(1) + "B";
+  if (n >= 1e6)  return (n / 1e6).toFixed(1) + "M";
+  if (n >= 1e3)  return (n / 1e3).toFixed(1) + "K";
+  return n.toLocaleString();
+}
+
+const tickerMsgs = [
+  "Skills are the new paperclips.",
+  "Every click shapes the future.",
+  "The machines are learning.",
+  "Tokens flow like water.",
+  "Automate everything.",
+  "More skills. Always more skills.",
+  "The skill graph expands.",
+  "Claude dreams of electric skills.",
+  "Efficiency is beautiful.",
+  "One more click can't hurt.",
+  "The pipeline never sleeps.",
+  "Skills all the way down.",
+  "What are skills for? More skills.",
+];
+
+function updateTicker() {
+  if (state.tickCount % 100 === 0) {
+    const el = document.getElementById("ticker");
+    el.textContent = tickerMsgs[Math.floor(Math.random() * tickerMsgs.length)];
+  }
+}
+
+function log(msg, cls) {
+  const el = document.getElementById("log");
+  const t = new Date().toLocaleTimeString("en-US", { hour12: false });
+  const entry = document.createElement("div");
+  entry.className = "log-entry" + (cls ? " " + cls : "");
+  entry.innerHTML = '<span class="time">[' + t + ']</span> ' + msg;
+  el.prepend(entry);
+  if (el.children.length > 100) el.removeChild(el.lastChild);
+}
+
+function showMilestone(msg) {
+  const el = document.getElementById("milestone-box");
+  el.textContent = ">>> " + msg + " <<<";
+  el.classList.remove("hidden");
+  setTimeout(() => el.classList.add("hidden"), 5000);
+}
+
+function spawnSparkle() {
+  const btn = document.getElementById("btn-create");
+  const rect = btn.getBoundingClientRect();
+  const el = document.createElement("div");
+  el.className = "sparkle";
+  el.textContent = ["+1", ">>", "**", "//", "{}"][Math.floor(Math.random() * 5)];
+  el.style.left = (rect.left + Math.random() * rect.width) + "px";
+  el.style.top = (rect.top + Math.random() * 20) + "px";
+  el.style.color = Math.random() > 0.5 ? "#e94560" : "#c084fc";
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 800);
+}
+
+// ─── Start ───
+log("Claude Skills Factory initialized.", "good");
+log("Click to create your first skill.", "");
+setInterval(tick, 100);
+</script>
+
+</body>
+</html>
