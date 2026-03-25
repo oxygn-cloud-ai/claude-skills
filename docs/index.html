@@ -52,11 +52,12 @@
   body.light .btn-again:hover { color: #000000; border-color: #000000; }
   body.light .log { background: var(--surface); }
 
-  /* Theme toggle */
+  /* Theme toggle — positioned inside header */
+  header { position: relative; }
   .theme-toggle {
-    position: fixed;
-    top: 16px;
-    right: 16px;
+    position: absolute;
+    top: 30px;
+    right: 0;
     z-index: 100;
     cursor: pointer;
     font-family: var(--mono);
@@ -96,13 +97,6 @@
     padding: 30px 0 20px;
     border-bottom: 1px solid var(--border);
     margin-bottom: 24px;
-  }
-
-  header h1 {
-    font-size: 28px;
-    color: var(--accent2);
-    letter-spacing: 2px;
-    text-transform: uppercase;
   }
 
   header .subtitle {
@@ -443,8 +437,6 @@
 </head>
 <body>
 
-<button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()">light</button>
-
 <div class="container" id="game-container">
   <header>
     <div class="ascii-art" aria-hidden="true">
@@ -454,8 +446,8 @@
  | |    | |/ _` | | | |/ _` |/ _ \ ___) |   &lt;| | | \__ \
  | |____| | (_| | |_| | (_| |  __/|____/|_|\_\_|_|_|___/
   \_____|_|\__,_|\__,_|\__,_|\___|  F A C T O R Y</div>
-    <h1>Claude Skills Factory</h1>
     <p class="subtitle">an incremental game</p>
+    <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()">light</button>
   </header>
 
   <!-- Narrative -->
