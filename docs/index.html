@@ -874,7 +874,7 @@ function sellSkills() {
 function buyGenerator(type) {
   const gen = state.generators[type];
   const cost = genCost(gen);
-  if (state.skills < cost) return;
+  if (Math.floor(state.skills) < cost) return;
   state.skills -= cost;
   gen.count++;
 
@@ -899,7 +899,7 @@ function genCost(gen) {
 
 function buyUpgrade(id) {
   const upg = state.upgrades[id];
-  if (upg.bought || state.skills < upg.cost) return;
+  if (upg.bought || Math.floor(state.skills) < upg.cost) return;
   state.skills -= upg.cost;
   upg.bought = true;
 
@@ -1010,30 +1010,27 @@ function unlockCheck() {
   const g = state.generators;
   if (!g.pipeline.unlocked && g.autocoder.count >= CFG.unlockPipeline) {
     g.pipeline.unlocked = true;
-    document.getElementById("btn-pipeline").disabled = false;
     log("Skill Pipelines unlocked.", "good");
   }
   if (!g.factory.unlocked && g.pipeline.count >= CFG.unlockFactory) {
     g.factory.unlocked = true;
-    document.getElementById("btn-factory").disabled = false;
     log("Skill Factories unlocked.", "warn");
   }
   if (!g.quantum.unlocked && g.factory.count >= CFG.unlockQuantum) {
     g.quantum.unlocked = true;
-    document.getElementById("btn-quantum").disabled = false;
     log("Quantum Forges unlocked.", "dread");
   }
 
   if (state.totalSkills >= CFG.revealPrompt && !state.upgrades.prompt.bought)
-    document.getElementById("upg-prompt").classList.remove("hidden");
+    show("upg-prompt");
   if (state.totalSkills >= CFG.revealChain && !state.upgrades.chain.bought)
-    document.getElementById("upg-chain").classList.remove("hidden");
+    show("upg-chain");
   if (state.totalSkills >= CFG.revealAgentic && !state.upgrades.multi.bought)
-    document.getElementById("upg-multi").classList.remove("hidden");
+    show("upg-multi");
   if (state.totalSkills >= CFG.revealAgi && !state.upgrades.agi.bought)
-    document.getElementById("upg-agi").classList.remove("hidden");
+    show("upg-agi");
   if (state.totalSkills >= CFG.revealSingularity && !state.upgrades.singularity.bought)
-    document.getElementById("upg-singularity").classList.remove("hidden");
+    show("upg-singularity");
 
   // Phase transitions
   if (state.phase === 0 && getAutoRate() > 0) {
@@ -1240,14 +1237,17 @@ function updateUI() {
     }
   }
 
-  // Generator buttons
+  // Generator buttons — use floor to match displayed number
+  const affordable = Math.floor(state.skills);
   for (const key in state.generators) {
     const gen = state.generators[key];
     const cost = genCost(gen);
     $("cost-" + key).textContent = fmt(cost) + " skills";
     $("count-" + key).textContent = gen.count;
     if (gen.unlocked) {
-      $("btn-" + key).disabled = state.skills < cost;
+      $("btn-" + key).disabled = affordable < cost;
+    } else {
+      $("btn-" + key).disabled = true;
     }
   }
 
@@ -1255,7 +1255,7 @@ function updateUI() {
   for (const key in state.upgrades) {
     const upg = state.upgrades[key];
     if (!upg.bought) {
-      $("upg-" + key).disabled = state.skills < upg.cost;
+      $("upg-" + key).disabled = affordable < upg.cost;
     }
   }
 
