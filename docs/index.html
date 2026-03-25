@@ -8,17 +8,17 @@
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   :root {
-    --bg: #1a1a2e;
-    --surface: #16213e;
-    --surface2: #0f3460;
-    --border: #533483;
-    --accent: #e94560;
-    --accent2: #c084fc;
+    --bg: #000000;
+    --surface: #111111;
+    --surface2: #1a1a1a;
+    --border: #333333;
+    --accent: #ffffff;
+    --accent2: #cccccc;
     --text: #e0e0e0;
-    --text-dim: #8888aa;
-    --success: #4ade80;
-    --warning: #fbbf24;
-    --danger: #ef4444;
+    --text-dim: #777777;
+    --success: #cccccc;
+    --warning: #999999;
+    --danger: #888888;
     --mono: 'Courier New', 'Consolas', monospace;
   }
 
@@ -151,35 +151,54 @@
   }
 
   .btn-primary {
-    background: var(--accent);
-    color: white;
-    border-color: var(--accent);
+    background: #ffffff;
+    color: #000000;
+    border-color: #ffffff;
     font-size: 16px;
     text-align: center;
     padding: 14px;
     letter-spacing: 1px;
     transition: all 0.15s, opacity 4s;
+    box-shadow: 0 2px 0 #555555, 0 3px 6px rgba(0,0,0,0.5);
   }
 
   .btn-primary:hover:not(:disabled) {
-    background: #ff5a75;
-    border-color: #ff5a75;
+    background: #dddddd;
+    border-color: #dddddd;
+  }
+
+  .btn-primary:active:not(:disabled) {
+    box-shadow: 0 1px 0 #555555;
+    transform: translateY(1px);
   }
 
   .btn-buy {
-    background: var(--surface2);
+    background: #1a1a1a;
     color: var(--text);
+    box-shadow: 0 2px 0 #2a2a2a, 0 3px 4px rgba(0,0,0,0.4);
+  }
+
+  .btn-buy:active:not(:disabled) {
+    box-shadow: 0 1px 0 #2a2a2a;
+    transform: translateY(1px);
   }
 
   .btn-upgrade {
     background: transparent;
-    color: var(--accent2);
-    border-color: var(--accent2);
+    color: #cccccc;
+    border-color: #555555;
+    box-shadow: 0 2px 0 #222222, 0 3px 4px rgba(0,0,0,0.4);
   }
 
   .btn-upgrade:hover:not(:disabled) {
-    background: var(--accent2);
-    color: var(--bg);
+    background: #ffffff;
+    color: #000000;
+    border-color: #ffffff;
+  }
+
+  .btn-upgrade:active:not(:disabled) {
+    box-shadow: 0 1px 0 #222222;
+    transform: translateY(1px);
   }
 
   .cost { color: var(--warning); font-size: 11px; float: right; margin-top: 2px; }
@@ -226,14 +245,14 @@
 
   .progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    background: linear-gradient(90deg, #666666, #ffffff);
     transition: width 0.3s;
     border-radius: 3px;
   }
 
   .relevance-fill {
     height: 100%;
-    background: var(--success);
+    background: #ffffff;
     transition: width 0.5s, background 2s;
     border-radius: 3px;
   }
@@ -340,8 +359,8 @@
   }
 
   .btn-again:hover {
-    color: var(--accent);
-    border-color: var(--accent);
+    color: #ffffff;
+    border-color: #ffffff;
   }
 
   footer {
@@ -351,7 +370,7 @@
     font-size: 11px;
   }
 
-  footer a { color: var(--accent2); text-decoration: none; }
+  footer a { color: #aaaaaa; text-decoration: none; }
   footer a:hover { text-decoration: underline; }
 </style>
 </head>
@@ -1047,19 +1066,19 @@ function updateUI() {
   if (state.phase >= 1) {
     $("relevance-bar").style.width = Math.max(1, hpct) + "%";
     if (hpct > 50) {
-      $("relevance-bar").style.background = "var(--success)";
+      $("relevance-bar").style.background = "#ffffff";
       $("relevance-label").textContent = "essential";
     } else if (hpct > 20) {
-      $("relevance-bar").style.background = "var(--warning)";
+      $("relevance-bar").style.background = "#aaaaaa";
       $("relevance-label").textContent = "helpful";
     } else if (hpct > 5) {
-      $("relevance-bar").style.background = "var(--accent)";
+      $("relevance-bar").style.background = "#666666";
       $("relevance-label").textContent = "optional";
     } else if (hpct > 1) {
-      $("relevance-bar").style.background = "var(--danger)";
+      $("relevance-bar").style.background = "#444444";
       $("relevance-label").textContent = "negligible";
     } else {
-      $("relevance-bar").style.background = "#444";
+      $("relevance-bar").style.background = "#222222";
       $("relevance-label").textContent = "irrelevant";
     }
   }
@@ -1133,7 +1152,7 @@ function spawnSparkle() {
   el.textContent = ["+1", ">>", "**", "//", "{}"][Math.floor(Math.random() * 5)];
   el.style.left = (rect.left + Math.random() * rect.width) + "px";
   el.style.top = (rect.top + Math.random() * 20) + "px";
-  el.style.color = Math.random() > 0.5 ? "#e94560" : "#c084fc";
+  el.style.color = Math.random() > 0.5 ? "#ffffff" : "#999999";
   document.body.appendChild(el);
   setTimeout(() => el.remove(), 800);
 }
