@@ -1290,6 +1290,17 @@ function log(msg, cls) {
   if (el.children.length > 100) el.removeChild(el.lastChild);
 }
 
+function logRaw(msg, color) {
+  const el = document.getElementById("log");
+  const t = new Date().toLocaleTimeString("en-US", { hour12: false });
+  const entry = document.createElement("div");
+  entry.className = "log-entry";
+  entry.style.color = color;
+  entry.innerHTML = '<span class="time" style="color:' + color + '">[' + t + ']</span> ' + msg;
+  el.prepend(entry);
+  if (el.children.length > 100) el.removeChild(el.lastChild);
+}
+
 function showMilestone(msg) {
   const el = document.getElementById("milestone-box");
   el.textContent = ">>> " + msg + " <<<";
@@ -1327,7 +1338,7 @@ function checkEasterEggs() {
   // 404: Purpose Not Found
   if (!_eggs.e404 && Math.floor(t) === 404) {
     _eggs.e404 = true;
-    log("404: purpose not found", "dread");
+    logRaw("404: purpose not found", "#cc0000");
   }
 
   // 1337 — the machine whispers
@@ -1397,13 +1408,17 @@ function checkEasterEggs() {
     setTimeout(() => { el.textContent = orig; el.style.opacity = "1"; }, 2500);
   }
 
-  // 666 — brief flicker
-  if (!_eggs.e666 && Math.floor(t) === 666) {
+  // 666 — red flicker
+  if (!_eggs.e666 && Math.floor(t) >= 666 && Math.floor(t) < 670) {
     _eggs.e666 = true;
     const art = document.querySelector(".ascii-art");
-    art.style.transition = "color 0.1s";
-    art.style.color = "#880000";
-    setTimeout(() => { art.style.color = ""; }, 200);
+    const origColor = getComputedStyle(art).color;
+    art.style.transition = "none";
+    art.style.color = "#cc0000";
+    setTimeout(() => {
+      art.style.transition = "color 1.5s ease";
+      art.style.color = origColor;
+    }, 800);
   }
 
   // 10000 binary — HELP in the log, then gone
@@ -1435,7 +1450,7 @@ document.addEventListener("keydown", function(e) {
       _konamiIdx = 0;
       if (!_eggs.konami) {
         _eggs.konami = true;
-        log("I SEE YOU", "dread");
+        logRaw("I SEE YOU", "#cc0000");
         showMilestone(">>> you found it <<<");
       }
     }
