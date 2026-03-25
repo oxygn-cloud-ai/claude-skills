@@ -20,7 +20,56 @@
     --warning: #999999;
     --danger: #888888;
     --mono: 'Courier New', 'Consolas', monospace;
+    --btn-shadow: #555555;
+    --btn-shadow-deep: rgba(255,255,255,0.06);
+    --btn-buy-shadow: #444444;
+    --btn-upg-shadow: #3a3a3a;
   }
+
+  body.light {
+    --bg: #ffffff;
+    --surface: #f0f0f0;
+    --surface2: #e4e4e4;
+    --border: #cccccc;
+    --accent: #000000;
+    --accent2: #333333;
+    --text: #1a1a1a;
+    --text-dim: #777777;
+    --success: #333333;
+    --warning: #666666;
+    --danger: #555555;
+    --btn-shadow: #999999;
+    --btn-shadow-deep: rgba(0,0,0,0.15);
+    --btn-buy-shadow: #aaaaaa;
+    --btn-upg-shadow: #bbbbbb;
+  }
+
+  /* Light mode overrides for hardcoded elements */
+  body.light .ascii-art { color: #333333; }
+  body.light .void-overlay { background: #ffffff; }
+  body.light .void-text { color: #555555; }
+  body.light .btn-again { border-color: #cccccc; color: #888888; }
+  body.light .btn-again:hover { color: #000000; border-color: #000000; }
+  body.light .log { background: var(--surface); }
+
+  /* Theme toggle */
+  .theme-toggle {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 100;
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 4px 10px;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+  }
+  .theme-toggle:hover { opacity: 1; }
 
   body {
     background: var(--bg);
@@ -142,7 +191,7 @@
   }
 
   button:active:not(:disabled) {
-    transform: scale(0.98);
+    transform: none;
   }
 
   button:disabled {
@@ -151,54 +200,69 @@
   }
 
   .btn-primary {
-    background: #ffffff;
-    color: #000000;
-    border-color: #ffffff;
+    background: var(--accent);
+    color: var(--bg);
+    border-color: var(--accent);
     font-size: 16px;
     text-align: center;
     padding: 14px;
     letter-spacing: 1px;
     transition: all 0.15s, opacity 4s;
-    box-shadow: 0 2px 0 #555555, 0 3px 6px rgba(0,0,0,0.5);
+    box-shadow:
+      0 4px 0 var(--btn-shadow),
+      0 6px 12px var(--btn-shadow-deep);
+    position: relative;
+    top: 0;
   }
 
   .btn-primary:hover:not(:disabled) {
-    background: #dddddd;
-    border-color: #dddddd;
+    background: var(--accent2);
+    border-color: var(--accent2);
   }
 
   .btn-primary:active:not(:disabled) {
-    box-shadow: 0 1px 0 #555555;
-    transform: translateY(1px);
+    box-shadow: 0 1px 0 var(--btn-shadow);
+    top: 3px;
+    transform: none;
   }
 
   .btn-buy {
-    background: #1a1a1a;
+    background: var(--surface2);
     color: var(--text);
-    box-shadow: 0 2px 0 #2a2a2a, 0 3px 4px rgba(0,0,0,0.4);
+    box-shadow:
+      0 3px 0 var(--btn-buy-shadow),
+      0 5px 10px var(--btn-shadow-deep);
+    position: relative;
+    top: 0;
   }
 
   .btn-buy:active:not(:disabled) {
-    box-shadow: 0 1px 0 #2a2a2a;
-    transform: translateY(1px);
+    box-shadow: 0 1px 0 var(--btn-buy-shadow);
+    top: 2px;
+    transform: none;
   }
 
   .btn-upgrade {
     background: transparent;
-    color: #cccccc;
-    border-color: #555555;
-    box-shadow: 0 2px 0 #222222, 0 3px 4px rgba(0,0,0,0.4);
+    color: var(--accent2);
+    border-color: var(--border);
+    box-shadow:
+      0 3px 0 var(--btn-upg-shadow),
+      0 5px 10px var(--btn-shadow-deep);
+    position: relative;
+    top: 0;
   }
 
   .btn-upgrade:hover:not(:disabled) {
-    background: #ffffff;
-    color: #000000;
-    border-color: #ffffff;
+    background: var(--accent);
+    color: var(--bg);
+    border-color: var(--accent);
   }
 
   .btn-upgrade:active:not(:disabled) {
-    box-shadow: 0 1px 0 #222222;
-    transform: translateY(1px);
+    box-shadow: 0 1px 0 var(--btn-upg-shadow);
+    top: 2px;
+    transform: none;
   }
 
   .cost { color: var(--warning); font-size: 11px; float: right; margin-top: 2px; }
@@ -245,7 +309,7 @@
 
   .progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, #666666, #ffffff);
+    background: linear-gradient(90deg, var(--border), var(--accent));
     transition: width 0.3s;
     border-radius: 3px;
   }
@@ -370,11 +434,13 @@
     font-size: 11px;
   }
 
-  footer a { color: #aaaaaa; text-decoration: none; }
+  footer a { color: var(--text-dim); text-decoration: none; }
   footer a:hover { text-decoration: underline; }
 </style>
 </head>
 <body>
+
+<button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()">light</button>
 
 <div class="container" id="game-container">
   <header>
@@ -1065,20 +1131,21 @@ function updateUI() {
   // Human relevance meter
   if (state.phase >= 1) {
     $("relevance-bar").style.width = Math.max(1, hpct) + "%";
+    const lt = document.body.classList.contains("light");
     if (hpct > 50) {
-      $("relevance-bar").style.background = "#ffffff";
+      $("relevance-bar").style.background = lt ? "#000000" : "#ffffff";
       $("relevance-label").textContent = "essential";
     } else if (hpct > 20) {
-      $("relevance-bar").style.background = "#aaaaaa";
+      $("relevance-bar").style.background = lt ? "#555555" : "#aaaaaa";
       $("relevance-label").textContent = "helpful";
     } else if (hpct > 5) {
-      $("relevance-bar").style.background = "#666666";
+      $("relevance-bar").style.background = lt ? "#999999" : "#666666";
       $("relevance-label").textContent = "optional";
     } else if (hpct > 1) {
-      $("relevance-bar").style.background = "#444444";
+      $("relevance-bar").style.background = lt ? "#bbbbbb" : "#444444";
       $("relevance-label").textContent = "negligible";
     } else {
-      $("relevance-bar").style.background = "#222222";
+      $("relevance-bar").style.background = lt ? "#dddddd" : "#222222";
       $("relevance-label").textContent = "irrelevant";
     }
   }
@@ -1152,9 +1219,20 @@ function spawnSparkle() {
   el.textContent = ["+1", ">>", "**", "//", "{}"][Math.floor(Math.random() * 5)];
   el.style.left = (rect.left + Math.random() * rect.width) + "px";
   el.style.top = (rect.top + Math.random() * 20) + "px";
-  el.style.color = Math.random() > 0.5 ? "#ffffff" : "#999999";
+  const isLight = document.body.classList.contains("light");
+  el.style.color = Math.random() > 0.5 ? (isLight ? "#000000" : "#ffffff") : (isLight ? "#888888" : "#999999");
   document.body.appendChild(el);
   setTimeout(() => el.remove(), 800);
+}
+
+// ═══════════════════════════════════════════
+//  THEME
+// ═══════════════════════════════════════════
+function toggleTheme() {
+  const body = document.body;
+  const btn = document.getElementById("theme-toggle");
+  body.classList.toggle("light");
+  btn.textContent = body.classList.contains("light") ? "dark" : "light";
 }
 
 // ═══════════════════════════════════════════
