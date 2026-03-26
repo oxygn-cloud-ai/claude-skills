@@ -987,11 +987,51 @@ function spawnSparkle() {
 }
 
 // ── Connection ──
+// Auto-detects mode: WebSocket (pod/local) or polling (serverless).
+// Serverless handler uses POST /api with { action, ... } JSON body.
+// Pod/local server uses REST + WebSocket.
+
+let _mode = null; // 'ws' or 'poll'
+let _pollTimer = null;
+let _apiBase = ''; // base URL for API calls
+
+async function apiCall(input) {
+  const resp = await fetch(_apiBase + '/api', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  return resp.json();
+}
+
 async function init() {
+  // Detect mode: try the unified /api endpoint first (serverless handler),
+  // fall back to REST endpoints (pod/local server)
   try {
-    const resp = await fetch('/api/game-data');
-    _quoteData = await resp.json();
-    _quotePool = (_quoteData.quotes || []).slice();
+    const probe = await fetch('/api', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'health' }),
+    });
+    if (probe.ok) {
+      _mode = 'poll';
+      _apiBase = '';
+    }
+  } catch(e) {}
+
+  if (!_mode) _mode = 'ws'; // fall back to WebSocket mode
+
+  // Fetch game data
+  try {
+    let data;
+    if (_mode === 'poll') {
+      data = await apiCall({ action: 'game-data' });
+    } else {
+      const resp = await fetch('/api/game-data');
+      data = await resp.json();
+    }
+    _quoteData = data;
+    _quotePool = (data.quotes || []).slice();
     for (let i = _quotePool.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [_quotePool[i], _quotePool[j]] = [_quotePool[j], _quotePool[i]];
@@ -1000,9 +1040,15 @@ async function init() {
     _quoteData = { quotes: [], modelNames: [] };
   }
 
+  // Create game session
   try {
-    const resp = await fetch('/api/new-game', { method: 'POST' });
-    const data = await resp.json();
+    let data;
+    if (_mode === 'poll') {
+      data = await apiCall({ action: 'new-game' });
+    } else {
+      const resp = await fetch('/api/new-game', { method: 'POST' });
+      data = await resp.json();
+    }
     _sessionId = data.sessionId;
     $('pair-code').textContent = data.pairCode;
   } catch(e) {
@@ -1011,10 +1057,15 @@ async function init() {
     return;
   }
 
-  connectWS();
+  if (_mode === 'ws') {
+    connectWS();
+  } else {
+    startPolling();
+  }
   startQuotes();
 }
 
+// ── WebSocket mode (pod/local) ──
 function connectWS() {
   const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
   _ws = new WebSocket(proto + '//' + location.host + '/ws/' + _sessionId);
@@ -1049,10 +1100,44 @@ function connectWS() {
   _ws.onerror = () => { _ws.close(); };
 }
 
+// ── Polling mode (serverless) ──
+let _pollInitDone = false;
+
+function startPolling() {
+  $('conn-status').textContent = 'connected (polling)';
+  $('conn-status').className = 'conn-status connected';
+  poll();
+  _pollTimer = setInterval(poll, 200); // poll 5x/sec
+}
+
+async function poll() {
+  try {
+    const data = await apiCall({ action: 'poll', sessionId: _sessionId });
+    if (data.error) return;
+    _state = data.state;
+    if (!_pollInitDone) {
+      _pollInitDone = true;
+      log("Claude Skills Factory initialized.", "good");
+      $("btn-autocoder").classList.add("newest-item");
+      $("btn-buy-tokens").classList.add("newest-item");
+      log("Click to create your first skill.");
+    }
+    if (data.events) data.events.forEach(handleEvent);
+    updateUI();
+  } catch(e) {
+    $('conn-status').textContent = 'polling error — retrying...';
+    $('conn-status').className = 'conn-status disconnected';
+  }
+}
+
 // Make sendAction global so onclick handlers work
 window.sendAction = function(action) {
-  if (!_ws || _ws.readyState !== 1) return;
-  _ws.send(JSON.stringify({ type: 'action', action }));
+  if (_mode === 'ws') {
+    if (!_ws || _ws.readyState !== 1) return;
+    _ws.send(JSON.stringify({ type: 'action', action }));
+  } else {
+    apiCall({ action: 'game-action', sessionId: _sessionId, gameAction: action });
+  }
   if (action === 'createSkill') spawnSparkle();
 };
 
@@ -1403,7 +1488,11 @@ document.addEventListener("keydown", function(e) {
     const wordEggKeys = ["why","help","quit","stop","hello","god","meaning","love","death","human","purpose","delete","sorry","goodbye","singularity","paperclip","clippy"];
     for (const word of wordEggKeys) {
       if (_wordBuf.endsWith(word)) {
-        if (_ws && _ws.readyState === 1) _ws.send(JSON.stringify({ type: 'word', word }));
+        if (_mode === 'ws') {
+          if (_ws && _ws.readyState === 1) _ws.send(JSON.stringify({ type: 'word', word }));
+        } else {
+          apiCall({ action: 'word', sessionId: _sessionId, word });
+        }
       }
     }
   }
