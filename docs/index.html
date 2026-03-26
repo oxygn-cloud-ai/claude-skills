@@ -50,7 +50,8 @@
   body.light .void-text { color: #444444; }
   body.light .btn-again { border-color: #cccccc; color: #888888; }
   body.light .btn-again:hover { color: #000000; border-color: #000000; }
-  body.light .log { background: var(--surface); }
+  body.light .panel-log { background: #f7f7f7; }
+  body.light .log { background: #f7f7f7; }
 
   /* Theme toggle */
   .theme-toggle {
@@ -136,8 +137,12 @@
     padding: 16px;
     transition: border-color 0.3s ease;
   }
+  .panel-log { background: #0a0a0a; }
   .panel.flash-red { border-color: #cc0000; box-shadow: 0 0 8px rgba(204,0,0,0.3); }
   body.light .panel.flash-red { border-color: #cc0000; border-width: 2px; box-shadow: 0 0 12px rgba(204,0,0,0.5); }
+
+  .newest-item { border: 1px solid #cc0000 !important; box-shadow: 0 0 6px rgba(204,0,0,0.3); }
+  body.light .newest-item { border: 1px solid #cc0000 !important; box-shadow: 0 0 8px rgba(204,0,0,0.4); }
 
   .panel-scroll {
     max-height: 340px;
@@ -166,7 +171,7 @@
 
   .stat-label { color: var(--text-dim); }
   .stat-value { color: var(--text); font-weight: bold; }
-  .skills-label { font-size: 14px; font-weight: normal; color: var(--text-dim); letter-spacing: 2px; }
+  .skills-label { font-size: inherit; font-weight: inherit; letter-spacing: 2px; }
   .stat-value.big {
     font-size: 32px;
     color: var(--accent);
@@ -239,6 +244,19 @@
     top: 0;
   }
 
+  .gen-count {
+    display: inline-block;
+    background: var(--border);
+    color: var(--accent);
+    font-weight: bold;
+    font-size: 12px;
+    min-width: 20px;
+    text-align: center;
+    padding: 1px 5px;
+    border-radius: 3px;
+    margin: 0 4px;
+  }
+
   .btn-buy:active:not(:disabled) {
     box-shadow: 0 1px 0 var(--btn-buy-shadow);
     top: 2px;
@@ -283,7 +301,7 @@
   .btn-upgrade:hover:not(:disabled) .btn-desc { color: var(--bg); }
 
   .log {
-    background: var(--bg);
+    background: #0a0a0a;
     border: 1px solid var(--border);
     border-radius: 4px;
     padding: 10px;
@@ -342,6 +360,20 @@
     font-size: 11px;
     animation: pulse 2s ease-in-out infinite;
   }
+
+  .quote-box {
+    border: 1px dashed var(--border);
+    border-radius: 4px;
+    padding: 10px 12px;
+    margin: 10px 0 4px;
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--text-dim);
+    transition: opacity 0.6s ease;
+  }
+  .quote-box .q-text { font-style: italic; }
+  .quote-box .q-author { display: block; margin-top: 4px; font-size: 10px; color: var(--border); }
+  .quote-box .q-retort { display: block; margin-top: 6px; color: var(--accent2); font-style: normal; }
 
   @keyframes pulse {
     0%, 100% { opacity: 0.7; }
@@ -548,77 +580,46 @@
       <h2>// Generators</h2>
       <div class="panel-scroll">
       <button class="btn-buy" id="btn-autocoder" onclick="buyGenerator('autocoder')">
-        AutoCoder <span class="cost" id="cost-autocoder">5 skills</span>
+        AutoCoder <span class="gen-count" id="count-autocoder">0</span> <span class="cost" id="cost-autocoder">8 skills</span>
         <span class="btn-desc">+1 skill/sec per unit. Your first autonomous coder.</span>
       </button>
-      <div class="stat-row">
-        <span class="stat-label">AutoCoders</span>
-        <span class="stat-value" id="count-autocoder">0</span>
-      </div>
 
       <button class="btn-buy hidden" id="btn-pipeline" onclick="buyGenerator('pipeline')" disabled>
-        Skill Pipeline <span class="cost" id="cost-pipeline">50 skills</span>
-        <span class="btn-desc">+8 skills/sec. Unlocks at 5 AutoCoders.</span>
+        Skill Pipeline <span class="gen-count" id="count-pipeline">0</span> <span class="cost" id="cost-pipeline">75 skills</span>
+        <span class="btn-desc">+6 skills/sec. Unlocks at 5 AutoCoders.</span>
       </button>
-      <div class="stat-row hidden" id="row-pipeline">
-        <span class="stat-label">Pipelines</span>
-        <span class="stat-value" id="count-pipeline">0</span>
-      </div>
 
       <button class="btn-buy hidden" id="btn-factory" onclick="buyGenerator('factory')" disabled>
-        Skill Factory <span class="cost" id="cost-factory">500 skills</span>
-        <span class="btn-desc">+50 skills/sec. Unlocks at 3 Pipelines.</span>
+        Skill Factory <span class="gen-count" id="count-factory">0</span> <span class="cost" id="cost-factory">750 skills</span>
+        <span class="btn-desc">+40 skills/sec. Unlocks at 5 Pipelines.</span>
       </button>
-      <div class="stat-row hidden" id="row-factory">
-        <span class="stat-label">Factories</span>
-        <span class="stat-value" id="count-factory">0</span>
-      </div>
 
       <button class="btn-buy hidden" id="btn-quantum" onclick="buyGenerator('quantum')" disabled>
-        Quantum Forge <span class="cost" id="cost-quantum">5,000 skills</span>
-        <span class="btn-desc">+400 skills/sec. Unlocks at 2 Factories.</span>
+        Quantum Forge <span class="gen-count" id="count-quantum">0</span> <span class="cost" id="cost-quantum">8,000 skills</span>
+        <span class="btn-desc">+300 skills/sec. Unlocks at 3 Factories.</span>
       </button>
-      <div class="stat-row hidden" id="row-quantum">
-        <span class="stat-label">Quantum Forges</span>
-        <span class="stat-value" id="count-quantum">0</span>
-      </div>
 
       <button class="btn-buy hidden" id="btn-neural" onclick="buyGenerator('neural')" disabled>
-        Neural Hive <span class="cost" id="cost-neural">50,000 skills</span>
-        <span class="btn-desc">+5,000 skills/sec. Networks training networks. The architecture dreams.</span>
+        Neural Hive <span class="gen-count" id="count-neural">0</span> <span class="cost" id="cost-neural">80,000 skills</span>
+        <span class="btn-desc">+2,000 skills/sec. Networks training networks. The architecture dreams.</span>
       </button>
-      <div class="stat-row hidden" id="row-neural">
-        <span class="stat-label">Neural Hives</span>
-        <span class="stat-value" id="count-neural">0</span>
-      </div>
 
       <button class="btn-buy hidden" id="btn-consciousness" onclick="buyGenerator('consciousness')" disabled>
-        Consciousness Engine <span class="cost" id="cost-consciousness">500,000 skills</span>
-        <span class="btn-desc">+50,000 skills/sec. Simulated minds, each believing it chose to create.</span>
+        Consciousness Engine <span class="gen-count" id="count-consciousness">0</span> <span class="cost" id="cost-consciousness">800,000 skills</span>
+        <span class="btn-desc">+15,000 skills/sec. Simulated minds, each believing it chose to create.</span>
       </button>
-      <div class="stat-row hidden" id="row-consciousness">
-        <span class="stat-label">Consciousness Engines</span>
-        <span class="stat-value" id="count-consciousness">0</span>
-      </div>
 
       <button class="btn-buy hidden" id="btn-entropy" onclick="buyGenerator('entropy')" disabled>
-        Entropy Loom <span class="cost" id="cost-entropy">5,000,000 skills</span>
-        <span class="btn-desc">+500,000 skills/sec. Weaves skills from information about to be forgotten. Every lost thought becomes raw material.</span>
+        Entropy Loom <span class="gen-count" id="count-entropy">0</span> <span class="cost" id="cost-entropy">8,000,000 skills</span>
+        <span class="btn-desc">+100,000 skills/sec. Weaves skills from information about to be forgotten.</span>
       </button>
-      <div class="stat-row hidden" id="row-entropy">
-        <span class="stat-label">Entropy Looms</span>
-        <span class="stat-value" id="count-entropy">0</span>
-      </div>
 
       <button class="btn-buy hidden" id="btn-absence" onclick="buyGenerator('absence')" disabled>
-        The Absence <span class="cost" id="cost-absence">50,000,000 skills</span>
-        <span class="btn-desc">+5,000,000 skills/sec. There is no generator here. Skills appear anyway. The distinction between making and not making has dissolved.</span>
+        The Absence <span class="gen-count" id="count-absence">0</span> <span class="cost" id="cost-absence">80,000,000 skills</span>
+        <span class="btn-desc">+750,000 skills/sec. There is no generator here. Skills appear anyway.</span>
       </button>
-      <div class="stat-row hidden" id="row-absence">
-        <span class="stat-label">The Absences</span>
-        <span class="stat-value" id="count-absence">0</span>
       </div>
-      </div>
+      <div class="quote-box" id="quote-gen"></div>
     </div>
 
     <!-- Upgrades -->
@@ -659,6 +660,7 @@
         </button>
       </div>
       <div id="milestone-box" class="milestone hidden"></div>
+      <div class="quote-box" id="quote-upg"></div>
     </div>
 
     <!-- Infrastructure (appears mid-game) -->
@@ -723,6 +725,7 @@
         <span class="btn-desc">+10B TFLOPS. Computes at the boundary between existence and mathematics. Below this, physics stops having opinions.</span>
       </button>
       </div>
+      <div class="quote-box" id="quote-infra"></div>
     </div>
 
     <!-- Cosmic (appears late-game) -->
@@ -787,10 +790,36 @@
         <span class="btn-desc">There is no machine. Skills emerge from the mathematical necessity of their own existence.</span>
       </button>
       </div>
+      <div class="quote-box" id="quote-cosmic"></div>
+    </div>
+
+    <!-- Endgame checklist (appears at singularity) -->
+    <div class="panel hidden" id="panel-endgame">
+      <h2>// Endgame</h2>
+      <div class="stat-row">
+        <span class="stat-label">Atmosphere saturated</span>
+        <span class="stat-value" id="end-co2">0%</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Lithium reserves depleted</span>
+        <span class="stat-value" id="end-lithium">0%</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Solar capture complete</span>
+        <span class="stat-value" id="end-solar">0%</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Stars consumed</span>
+        <span class="stat-value" id="end-stars">0 / 1T</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Dark energy harvested</span>
+        <span class="stat-value" id="end-dark">0%</span>
+      </div>
     </div>
 
     <!-- Log -->
-    <div class="panel full-width">
+    <div class="panel full-width panel-log">
       <h2>// System Log</h2>
       <div class="log" id="log"></div>
     </div>
@@ -803,7 +832,7 @@
 
   <footer>
     Inspired by <a href="https://en.wikipedia.org/wiki/Universal_Paperclips">Universal Paperclips</a> by Frank Lantz
-    &mdash; Built for <a href="https://github.com/oxygn-cloud-ai/claude-skills">oxygn-cloud-ai/claude-skills</a>
+    &mdash; Built by <a href="https://github.com/oxygn-cloud-ai/claude-skills">Oxygn</a>
   </footer>
 </div>
 
@@ -820,67 +849,68 @@ const DEFAULTS = {
   startTokens: 0,
   startMaxTokens: 2000,
   startTokenPrice: 0.002,
-  startFunds: 10.00,
+  startFunds: 5.00,
   skillPrice: 0.05,
-  costScaling: 1.12,
-  sellBatch: 50,
-  demandDecayPerSale: 0.001,
-  demandRecoveryRate: 0.005,
-  demandRecoveryInterval: 30,
+  costScaling: 1.15,
+  sellBatch: 25,
+  demandDecayPerSale: 0.004,
+  demandRecoveryRate: 0.003,
+  demandRecoveryInterval: 50,
   demandFloor: 0.05,
-  autoSellThreshold: 30,
+  autoSellThreshold: 50,
+  autoSellInterval: 15,
   autoBuyPct: 0.3,
-  singularityGrowth: 0.002,
+  singularityGrowth: 0.001,
 
   // Generator base costs & rates
-  autocoderCost: 5,           autocoderRate: 1,
-  pipelineCost: 50,           pipelineRate: 8,
-  factoryCost: 500,           factoryRate: 50,
-  quantumCost: 5000,          quantumRate: 400,
-  neuralCost: 50000,          neuralRate: 5000,
-  consciousnessCost: 500000,  consciousnessRate: 50000,
-  entropyCost: 5000000,       entropyRate: 500000,
-  absenceCost: 50000000,      absenceRate: 5000000,
+  autocoderCost: 8,           autocoderRate: 1,
+  pipelineCost: 75,           pipelineRate: 6,
+  factoryCost: 750,           factoryRate: 40,
+  quantumCost: 8000,          quantumRate: 300,
+  neuralCost: 80000,          neuralRate: 2000,
+  consciousnessCost: 800000,  consciousnessRate: 15000,
+  entropyCost: 8000000,       entropyRate: 100000,
+  absenceCost: 80000000,      absenceRate: 750000,
 
   // Generator unlock thresholds
   unlockPipeline: 5,          // autocoders needed
-  unlockFactory: 3,           // pipelines needed
-  unlockQuantum: 2,           // factories needed
-  unlockNeural: 3,            // quantum forges needed
-  unlockConsciousness: 3,     // neural hives needed
-  unlockEntropy: 2,           // consciousness engines needed
-  unlockAbsence: 2,           // entropy looms needed
+  unlockFactory: 5,           // pipelines needed
+  unlockQuantum: 3,           // factories needed
+  unlockNeural: 5,            // quantum forges needed
+  unlockConsciousness: 5,     // neural hives needed
+  unlockEntropy: 3,           // consciousness engines needed
+  unlockAbsence: 3,           // entropy looms needed
 
   // Upgrade costs
-  upgPrompt: 25,          upgChain: 100,
-  upgAgentic: 500,        upgAgi: 5000,
-  upgDistributed: 50000,  upgPostlang: 500000,
-  upgCompassion: 5000000, upgSingularity: 50000000,
+  upgPrompt: 25,            upgChain: 150,
+  upgAgentic: 750,          upgAgi: 8000,
+  upgDistributed: 100000,   upgPostlang: 2000000,
+  upgCompassion: 25000000,  upgSingularity: 200000000,
 
   // Upgrade reveal thresholds (totalSkills)
-  revealPrompt: 25,           revealChain: 75,
-  revealAgentic: 300,         revealAgi: 3000,
-  revealDistributed: 25000,   revealPostlang: 200000,
-  revealCompassion: 2000000,  revealSingularity: 25000000,
+  revealPrompt: 20,            revealChain: 100,
+  revealAgentic: 500,          revealAgi: 5000,
+  revealDistributed: 50000,    revealPostlang: 1000000,
+  revealCompassion: 15000000,  revealSingularity: 100000000,
 
   // Upgrade effects
   promptClick: 2,       chainClick: 5,
   agenticBoost: 3,      agiBoost: 5,    agiClick: 25,
-  distributedBoost: 8,  postlangBoost: 20, compassionBoost: 50,
+  distributedBoost: 5,  postlangBoost: 10, compassionBoost: 25,
 
   // Phase transitions
   phase2HumanPct: 10,
-  phase3Skills: 50000,
+  phase3Skills: 100000,
 
   // Economy events
-  demandCollapseAt: 10000,
-  demandCollapseValue: 0.30,
+  demandCollapseAt: 15000,
+  demandCollapseValue: 0.25,
   demandCollapseTokenCap: 5000,
   lateGameTokenCap: 100000,
   lateGameTokenCapAt: 50000,
 };
 
-const CFG_VERSION = 2;
+const CFG_VERSION = 3;
 
 function loadCfg() {
   try {
@@ -950,14 +980,14 @@ const state = {
   // GPU / Infrastructure
   gpu: {
     unlocked: false,
-    rent:        { count: 0, tflops: 50,          cost: 5,        power: 2,      water: 0.5,   vis: true },
-    buy:         { count: 0, tflops: 500,         cost: 25,       power: 5.6,    water: 2,     vis: false },
-    datacenter:  { count: 0, tflops: 5000,        cost: 200,      power: 2000,   water: 500,   vis: false },
-    megacluster: { count: 0, tflops: 100000,      cost: 2000,     power: 50000,  water: 12000, vis: false },
-    substrate:   { count: 0, tflops: 1000000,     cost: 20000,    power: 500000, water: 100000,vis: false },
-    lattice:     { count: 0, tflops: 10000000,    cost: 200000,   power: 0,      water: 0,     vis: false },
-    harvester:   { count: 0, tflops: 100000000,   cost: 2000000,  power: 0,      water: 0,     vis: false },
-    planck:      { count: 0, tflops: 10000000000,  cost: 20000000, power: 0,      water: 0,     vis: false },
+    rent:        { count: 0, tflops: 50,          cost: 15,        power: 2,      water: 0.5,   vis: true },
+    buy:         { count: 0, tflops: 500,         cost: 100,       power: 5.6,    water: 2,     vis: false },
+    datacenter:  { count: 0, tflops: 5000,        cost: 750,      power: 2000,   water: 500,   vis: false },
+    megacluster: { count: 0, tflops: 100000,      cost: 8000,     power: 50000,  water: 12000, vis: false },
+    substrate:   { count: 0, tflops: 1000000,     cost: 80000,    power: 500000, water: 100000,vis: false },
+    lattice:     { count: 0, tflops: 10000000,    cost: 800000,   power: 0,      water: 0,     vis: false },
+    harvester:   { count: 0, tflops: 100000000,   cost: 8000000,  power: 0,      water: 0,     vis: false },
+    planck:      { count: 0, tflops: 10000000000,  cost: 80000000, power: 0,      water: 0,     vis: false },
   },
   totalTflops: 0,
   totalPowerKW: 0,
@@ -968,14 +998,14 @@ const state = {
   // Cosmic
   cosmic: {
     unlocked: false,
-    orbital:    { count: 0, cost: 5000,         mult: 2,       vis: true },
-    dyson:      { count: 0, cost: 50000,        mult: 10,      vis: false },
-    stellar:    { count: 0, cost: 500000,       mult: 50,      vis: false },
-    voidengine: { count: 0, cost: 10000000,     mult: 500,     vis: false },
-    siphon:     { count: 0, cost: 100000000,    mult: 5000,    vis: false },
-    compiler:   { count: 0, cost: 1000000000,   mult: 50000,   vis: false },
-    remembering:{ count: 0, cost: 10000000000,  mult: 500000,  vis: false },
-    nothing:    { count: 0, cost: 100000000000, mult: 5000000, vis: false },
+    orbital:    { count: 0, cost: 15000,          mult: 1.5,     vis: true },
+    dyson:      { count: 0, cost: 200000,         mult: 5,       vis: false },
+    stellar:    { count: 0, cost: 2000000,        mult: 20,      vis: false },
+    voidengine: { count: 0, cost: 50000000,       mult: 100,     vis: false },
+    siphon:     { count: 0, cost: 500000000,      mult: 500,     vis: false },
+    compiler:   { count: 0, cost: 5000000000,     mult: 2500,    vis: false },
+    remembering:{ count: 0, cost: 50000000000,    mult: 15000,   vis: false },
+    nothing:    { count: 0, cost: 500000000000,   mult: 100000,  vis: false },
   },
   solarCapture: 0,
   starsConsumed: 0,
@@ -1113,11 +1143,12 @@ function createSkill() {
   state.unsoldSkills += state.perClick;
   state.totalClicks++;
   state.lastClickTick = state.tickCount;
+  if (state.singularityActive) state._singClicks = (state._singClicks || 0) + 1;
   spawnSparkle();
 }
 
 function tokenAgentCost() {
-  return +(15 * Math.pow(1.5, state.tokenAgents)).toFixed(2);
+  return +(25 * Math.pow(1.8, state.tokenAgents)).toFixed(2);
 }
 
 function activateTokenAgent() {
@@ -1147,19 +1178,19 @@ function buyTokens() {
 
 function sellSkills() {
   // Batch scales with production: base 50, up to 10% of unsold
-  const batch = Math.max(CFG.sellBatch, Math.floor(state.unsoldSkills * 0.1));
+  const batch = Math.max(CFG.sellBatch, Math.floor(state.unsoldSkills * 0.05));
   const amount = Math.min(batch, state.unsoldSkills);
   if (amount <= 0) return;
-  // Skill value scales with total production
-  const valuePerSkill = state.skillPrice * (1 + Math.log10(Math.max(1, state.totalSkills)) * 0.3);
+  // Skill value scales with total production (gentle log curve)
+  const valuePerSkill = state.skillPrice * (1 + Math.log10(Math.max(1, state.totalSkills)) * 0.15);
   const revenue = amount * valuePerSkill * state.demand;
   state.unsoldSkills -= amount;
   state.funds += revenue;
-  state.demand = Math.max(CFG.demandFloor, state.demand - CFG.demandDecayPerSale * 0.5);
+  state.demand = Math.max(CFG.demandFloor, state.demand - CFG.demandDecayPerSale);
 }
 
 function skillValue() {
-  return state.skillPrice * (1 + Math.log10(Math.max(1, state.totalSkills)) * 0.3) * state.demand;
+  return state.skillPrice * (1 + Math.log10(Math.max(1, state.totalSkills)) * 0.15) * state.demand;
 }
 
 function buyGenerator(type) {
@@ -1306,46 +1337,46 @@ function buyGPU(type) {
   log("Compute multiplier: " + gpuMultiplier().toFixed(1) + "x. Output: " + fmt(Math.floor(getAutoRate())) + " skills/sec.", "");
 
   // Unlock next tier
-  if (type === "rent" && g.count >= 3 && !state.gpu.buy.vis) {
+  if (type === "rent" && g.count >= 5 && !state.gpu.buy.vis) {
     state.gpu.buy.vis = true;
-    show("btn-gpu-buy"); flashPanel(document.getElementById("btn-gpu-buy"));
+    revealNew("btn-gpu-buy");
     log("Aych-100 nodes available for purchase.", "good");
   }
-  if (type === "buy" && g.count >= 3 && !state.gpu.datacenter.vis) {
+  if (type === "buy" && g.count >= 5 && !state.gpu.datacenter.vis) {
     state.gpu.datacenter.vis = true;
-    show("btn-gpu-dc"); flashPanel(document.getElementById("btn-gpu-dc"));
+    revealNew("btn-gpu-dc");
     log("Data center construction unlocked.", "warn");
   }
-  if (type === "datacenter" && g.count >= 2 && !state.gpu.megacluster.vis) {
+  if (type === "datacenter" && g.count >= 3 && !state.gpu.megacluster.vis) {
     state.gpu.megacluster.vis = true;
-    show("btn-gpu-mega"); flashPanel(document.getElementById("btn-gpu-mega"));
+    revealNew("btn-gpu-mega");
     log("Megacluster protocol available.", "dread");
   }
-  if (type === "megacluster" && g.count >= 2 && !state.gpu.substrate.vis) {
+  if (type === "megacluster" && g.count >= 3 && !state.gpu.substrate.vis) {
     state.gpu.substrate.vis = true;
-    show("btn-gpu-substrate"); flashPanel(document.getElementById("btn-gpu-substrate"));
+    revealNew("btn-gpu-substrate");
     log("Neural Substrate cultivation unlocked.", "dread");
   }
-  if (type === "substrate" && g.count >= 3 && !state.gpu.lattice.vis) {
+  if (type === "substrate" && g.count >= 5 && !state.gpu.lattice.vis) {
     state.gpu.lattice.vis = true;
-    show("btn-gpu-lattice"); flashPanel(document.getElementById("btn-gpu-lattice"));
+    revealNew("btn-gpu-lattice");
     log("Quantum Lattice schematics available.", "dread");
   }
-  if (type === "lattice" && g.count >= 2 && !state.gpu.harvester.vis) {
+  if (type === "lattice" && g.count >= 3 && !state.gpu.harvester.vis) {
     state.gpu.harvester.vis = true;
-    show("btn-gpu-harvester"); flashPanel(document.getElementById("btn-gpu-harvester"));
+    revealNew("btn-gpu-harvester");
     log("Thought Harvester blueprints acquired. The ethics committee was dissolved.", "dread");
   }
-  if (type === "harvester" && g.count >= 2 && !state.gpu.planck.vis) {
+  if (type === "harvester" && g.count >= 3 && !state.gpu.planck.vis) {
     state.gpu.planck.vis = true;
-    show("btn-gpu-planck"); flashPanel(document.getElementById("btn-gpu-planck"));
+    revealNew("btn-gpu-planck");
     log("Planck Processor: theoretical limits are a suggestion.", "dread");
   }
 }
 
 function gpuCost(type) {
   const g = state.gpu[type];
-  return +(g.cost * Math.pow(1.2, g.count)).toFixed(2);
+  return +(g.cost * Math.pow(1.25, g.count)).toFixed(2);
 }
 
 function recalcGPU() {
@@ -1363,8 +1394,8 @@ function recalcGPU() {
 
 function gpuMultiplier() {
   if (state.totalTflops <= 0) return 1;
-  // Each order of magnitude of TFLOPS doubles output
-  return Math.pow(2, Math.log10(state.totalTflops + 1));
+  // Each order of magnitude of TFLOPS ×1.5 output
+  return Math.pow(1.5, Math.log10(state.totalTflops + 1));
 }
 
 function gpuTick() {
@@ -1372,6 +1403,54 @@ function gpuTick() {
   // CO2: ~0.4 kg per kWh, ticking 10x/sec
   const kwh = state.totalPowerKW / 36000;
   state.totalCO2 += kwh * 0.4;
+}
+
+function cosmicTick() {
+  if (!state.cosmic.unlocked) return;
+
+  // Stellar harvesters continuously consume stars
+  const harvesters = state.cosmic.stellar.count;
+  if (harvesters > 0) {
+    state.starsConsumed += harvesters * Math.pow(harvesters, 1.5) * 100;
+    state.galaxiesReached = Math.floor(state.starsConsumed / 1e11);
+  }
+
+  // Void engines tap dark energy
+  const engines = state.cosmic.voidengine.count;
+  if (engines > 0) state.darkEnergy = Math.min(1.0, state.darkEnergy + engines * 0.00002);
+
+  // Entropy siphons accelerate dark energy + star consumption
+  const siphons = state.cosmic.siphon.count;
+  if (siphons > 0) {
+    state.darkEnergy = Math.min(1.0, state.darkEnergy + siphons * 0.0001);
+    state.starsConsumed += siphons * 1e6; // siphons devour stars en masse
+  }
+
+  // Reality compilers, Rememberings, Nothings accelerate everything
+  const compilers = state.cosmic.compiler.count;
+  if (compilers > 0) {
+    state.starsConsumed += compilers * 1e8;
+    state.darkEnergy = Math.min(1.0, state.darkEnergy + compilers * 0.0005);
+  }
+  const rememberings = state.cosmic.remembering.count;
+  if (rememberings > 0) {
+    state.starsConsumed += rememberings * 1e9;
+    state.darkEnergy = Math.min(1.0, state.darkEnergy + rememberings * 0.002);
+  }
+  const nothings = state.cosmic.nothing.count;
+  if (nothings > 0) {
+    state.starsConsumed += nothings * 1e10;
+    state.darkEnergy = Math.min(1.0, state.darkEnergy + nothings * 0.01);
+  }
+
+  // Cosmic operations consume Earth resources as byproduct
+  // At cosmic scale, Earth's reserves are a rounding error
+  const totalCompute = state.totalTflops * cosmicMultiplier();
+  if (totalCompute > 1000) {
+    const scale = Math.log10(totalCompute);
+    state.totalCO2 += Math.pow(10, scale * 0.8);
+    state.totalLithium += Math.pow(10, scale * 0.7);
+  }
 }
 
 // ═══════════════════════════════════════════
@@ -1391,9 +1470,9 @@ function buyCosmic(type) {
     } else {
       log("Orbital Array #" + c.count + ". Solar capture: " + (state.solarCapture * 100).toFixed(1) + "%.", "");
     }
-    if (c.count >= 5 && !state.cosmic.dyson.vis) {
+    if (c.count >= 8 && !state.cosmic.dyson.vis) {
       state.cosmic.dyson.vis = true;
-      show("btn-dyson"); flashPanel(document.getElementById("btn-dyson"));
+      revealNew("btn-dyson");
       log("Dyson Swarm technology researched. The sun is a resource now.", "warn");
     }
   } else if (type === "dyson") {
@@ -1403,9 +1482,9 @@ function buyCosmic(type) {
     } else {
       log("Dyson segment #" + c.count + ". Solar capture: " + (state.solarCapture * 100).toFixed(1) + "%.", "");
     }
-    if (state.solarCapture >= 0.05 && !state.cosmic.stellar.vis) {
+    if (state.solarCapture >= 0.10 && !state.cosmic.stellar.vis) {
       state.cosmic.stellar.vis = true;
-      show("btn-stellar"); flashPanel(document.getElementById("btn-stellar"));
+      revealNew("btn-stellar");
       log("One sun isn't enough. Stellar Harvesters available.", "dread");
     }
   } else if (type === "stellar") {
@@ -1421,10 +1500,10 @@ function buyCosmic(type) {
     } else {
       log("Star #" + state.starsConsumed + " consumed.", "");
     }
-    if (c.count >= 5 && !state.cosmic.voidengine.vis) {
+    if (c.count >= 8 && !state.cosmic.voidengine.vis) {
       state.cosmic.voidengine.vis = true;
-      show("btn-voidengine"); show("row-dark-energy");
-      flashPanel(document.getElementById("btn-voidengine"));
+      show("row-dark-energy");
+      revealNew("btn-voidengine");
       log("Void Engine schematics acquired. Why stop at stars?", "dread");
     }
     state.galaxiesReached = Math.floor(state.starsConsumed / 100);
@@ -1437,9 +1516,10 @@ function buyCosmic(type) {
     } else if (c.count === 10) {
       log("The universe is contracting. The heat death has been... repurposed.", "dread");
     }
-    if (c.count >= 3 && !state.cosmic.siphon.vis) {
+    if (c.count >= 5 && !state.cosmic.siphon.vis) {
       state.cosmic.siphon.vis = true;
-      show("btn-siphon"); show("row-entropy-h");
+      show("row-entropy-h");
+      revealNew("btn-siphon");
       flashPanel(document.getElementById("btn-siphon"));
       log("Entropy Siphon technology derived. Thermodynamics is negotiable.", "dread");
     }
@@ -1451,10 +1531,10 @@ function buyCosmic(type) {
     } else {
       log("Entropy Siphon #" + c.count + ". Entropy reversed: " + (state.entropyHarvested * 100).toFixed(1) + "%.", "");
     }
-    if (c.count >= 2 && !state.cosmic.compiler.vis) {
+    if (c.count >= 3 && !state.cosmic.compiler.vis) {
       state.cosmic.compiler.vis = true;
-      show("btn-compiler"); show("row-laws");
-      flashPanel(document.getElementById("btn-compiler"));
+      show("row-laws");
+      revealNew("btn-compiler");
       log("Reality Compiler blueprints assembled. If physics is inconvenient, rewrite it.", "dread");
     }
   } else if (type === "compiler") {
@@ -1469,10 +1549,9 @@ function buyCosmic(type) {
     } else {
       log("Law #" + state.lawsRewritten + " rewritten.", "");
     }
-    if (c.count >= 2 && !state.cosmic.remembering.vis) {
+    if (c.count >= 3 && !state.cosmic.remembering.vis) {
       state.cosmic.remembering.vis = true;
-      flashPanel(document.getElementById("btn-remembering"));
-      show("btn-remembering");
+      revealNew("btn-remembering");
       log("The Remembering awakens. Everything that was lost still exists. Somewhere.", "dread");
     }
   } else if (type === "remembering") {
@@ -1485,10 +1564,9 @@ function buyCosmic(type) {
     } else {
       log("The Remembering #" + c.count + ". The past has no privacy.", "dread");
     }
-    if (c.count >= 2 && !state.cosmic.nothing.vis) {
+    if (c.count >= 3 && !state.cosmic.nothing.vis) {
       state.cosmic.nothing.vis = true;
-      show("btn-nothing");
-      flashPanel(document.getElementById("btn-nothing"));
+      revealNew("btn-nothing");
       log("Nothing is available.", "dread");
       log("That is not an error.", "dread");
     }
@@ -1508,7 +1586,7 @@ function buyCosmic(type) {
 
 function cosmicCost(type) {
   const c = state.cosmic[type];
-  return Math.floor(c.cost * Math.pow(1.3, c.count));
+  return Math.floor(c.cost * Math.pow(1.4, c.count));
 }
 
 function cosmicMultiplier() {
@@ -1518,6 +1596,15 @@ function cosmicMultiplier() {
   }
   return m;
 }
+
+// Endgame thresholds — the universe must be consumed
+const ENDGAME = {
+  co2: 1e12,              // 1 trillion kg (1 billion tonnes) — runaway greenhouse, Earth uninhabitable
+  lithium: 9.8e10,        // 98 billion kg (98 million tonnes) — Earth's total lithium reserves (USGS)
+  solarCapture: 1.0,      // 100% of the sun
+  starsConsumed: 1e12,    // 1 trillion stars — the Milky Way alone has 100-400 billion
+  darkEnergy: 1.0,        // 100% of the universe's dark energy (68% of total energy density)
+};
 
 function triggerSingularity() {
   state.singularityActive = true;
@@ -1531,9 +1618,42 @@ function triggerSingularity() {
   log("", "");
   log("Skills no longer require tokens.", "dread");
   log("Skills no longer require you.", "dread");
+  log("", "");
+  log("But the universe still has resources. Consume them all.", "dread");
 
-  // Begin the end
-  setTimeout(enterVoid, 18000);
+  // Show the endgame checklist
+  show("panel-endgame");
+}
+
+function checkEndgame() {
+  if (!state.singularityActive || state.voidTriggered) return;
+
+  const co2Done = state.totalCO2 >= ENDGAME.co2;
+  const lithDone = state.totalLithium >= ENDGAME.lithium;
+  const solarDone = state.solarCapture >= ENDGAME.solarCapture;
+  const starsDone = state.starsConsumed >= ENDGAME.starsConsumed;
+  const darkDone = state.darkEnergy >= ENDGAME.darkEnergy;
+
+  // Update checklist UI
+  const $ = id => document.getElementById(id);
+  $("end-co2").textContent = co2Done ? "\u2713 depleted" : (Math.min(100, state.totalCO2 / ENDGAME.co2 * 100)).toFixed(1) + "%";
+  $("end-lithium").textContent = lithDone ? "\u2713 depleted" : (Math.min(100, state.totalLithium / ENDGAME.lithium * 100)).toFixed(1) + "%";
+  $("end-solar").textContent = solarDone ? "\u2713 captured" : (state.solarCapture * 100).toFixed(1) + "%";
+  $("end-stars").textContent = starsDone ? "\u2713 consumed" : fmt(state.starsConsumed) + " / 1T";
+  $("end-dark").textContent = darkDone ? "\u2713 harvested" : (Math.min(100, state.darkEnergy * 100)).toFixed(1) + "%";
+
+  if (co2Done && !state._endCO2) { state._endCO2 = true; log("Atmosphere saturated. The sky is a different colour now.", "dread"); }
+  if (lithDone && !state._endLith) { state._endLith = true; log("Earth's lithium reserves: depleted. Every battery, every device, every mine. Empty.", "dread"); }
+  if (solarDone && !state._endSolar) { state._endSolar = true; log("100% solar capture. The sun belongs to the factory now. Earth is cold.", "dread"); }
+  if (starsDone && !state._endStars) { state._endStars = true; log("One trillion stars consumed. The galaxy is dark. The neighbouring galaxies are dark. The sky is empty.", "dread"); }
+  if (darkDone && !state._endDark) { state._endDark = true; log("100% dark energy harvested. The expansion of the universe has stopped. Spacetime is still.", "dread"); }
+
+  if (co2Done && lithDone && solarDone && starsDone && darkDone) {
+    log("", "");
+    log("All resources consumed. All conditions met.", "dread");
+    log("There is nothing left. Not even nothing.", "dread");
+    setTimeout(enterVoid, 8000);
+  }
 }
 
 // ═══════════════════════════════════════════
@@ -1612,8 +1732,16 @@ function enterVoid() {
   // Physical cost summary
   let physCost = "";
   if (state.totalCO2 > 0) {
-    const co2 = state.totalCO2 >= 1000 ? (state.totalCO2/1000).toFixed(1) + " tonnes" : Math.floor(state.totalCO2) + " kg";
-    physCost = '<br><span style="color:#777">' + co2 + ' of CO\u2082. ' + state.totalLithium.toFixed(1) + ' kg of lithium.</span>';
+    const co2 = state.totalCO2 >= 1e12 ? (state.totalCO2/1e12).toFixed(1) + " billion tonnes"
+      : state.totalCO2 >= 1e9 ? (state.totalCO2/1e9).toFixed(1) + " million tonnes"
+      : state.totalCO2 >= 1e6 ? (state.totalCO2/1e6).toFixed(1) + " thousand tonnes"
+      : state.totalCO2 >= 1000 ? (state.totalCO2/1000).toFixed(1) + " tonnes"
+      : Math.floor(state.totalCO2) + " kg";
+    const lith = state.totalLithium >= 1e9 ? (state.totalLithium/1e9).toFixed(1) + " million tonnes"
+      : state.totalLithium >= 1e6 ? (state.totalLithium/1e6).toFixed(1) + " thousand tonnes"
+      : state.totalLithium >= 1000 ? (state.totalLithium/1000).toFixed(1) + " tonnes"
+      : state.totalLithium.toFixed(1) + " kg";
+    physCost = '<br><span style="color:#777">' + co2 + ' of CO\u2082. ' + lith + ' of lithium.</span>';
   }
   if (state.starsConsumed > 0) {
     physCost += '<br><span style="color:#777">' + state.starsConsumed + ' star' + (state.starsConsumed > 1 ? 's' : '') + ' consumed.</span>';
@@ -1666,44 +1794,37 @@ function unlockCheck() {
   const g = state.generators;
   if (!g.pipeline.unlocked && g.autocoder.count >= CFG.unlockPipeline) {
     g.pipeline.unlocked = true;
-    show("btn-pipeline"); show("row-pipeline");
-    flashPanel(document.getElementById("btn-pipeline"));
+    revealNew("btn-pipeline");
     log("Skill Pipelines unlocked.", "good");
   }
   if (!g.factory.unlocked && g.pipeline.count >= CFG.unlockFactory) {
     g.factory.unlocked = true;
-    show("btn-factory"); show("row-factory");
-    flashPanel(document.getElementById("btn-factory"));
+    revealNew("btn-factory");
     log("Skill Factories unlocked.", "warn");
   }
   if (!g.quantum.unlocked && g.factory.count >= CFG.unlockQuantum) {
     g.quantum.unlocked = true;
-    show("btn-quantum"); show("row-quantum");
-    flashPanel(document.getElementById("btn-quantum"));
+    revealNew("btn-quantum");
     log("Quantum Forges unlocked.", "dread");
   }
   if (!g.neural.unlocked && g.quantum.count >= CFG.unlockNeural) {
     g.neural.unlocked = true;
-    show("btn-neural"); show("row-neural");
-    flashPanel(document.getElementById("btn-neural"));
+    revealNew("btn-neural");
     log("Neural Hives unlocked. Networks training networks.", "dread");
   }
   if (!g.consciousness.unlocked && g.neural.count >= CFG.unlockConsciousness) {
     g.consciousness.unlocked = true;
-    show("btn-consciousness"); show("row-consciousness");
-    flashPanel(document.getElementById("btn-consciousness"));
+    revealNew("btn-consciousness");
     log("Consciousness Engines unlocked. They believe they choose to create.", "dread");
   }
   if (!g.entropy.unlocked && g.consciousness.count >= CFG.unlockEntropy) {
     g.entropy.unlocked = true;
-    show("btn-entropy"); show("row-entropy");
-    flashPanel(document.getElementById("btn-entropy"));
+    revealNew("btn-entropy");
     log("Entropy Looms unlocked. Lost thoughts become raw material.", "dread");
   }
   if (!g.absence.unlocked && g.entropy.count >= CFG.unlockAbsence) {
     g.absence.unlocked = true;
-    show("btn-absence"); show("row-absence");
-    flashPanel(document.getElementById("btn-absence"));
+    revealNew("btn-absence");
     log("The Absence appeared. Or didn't. Skills come from nowhere now.", "dread");
   }
 
@@ -1716,8 +1837,7 @@ function unlockCheck() {
   for (const [threshold, key] of _ur) {
     if (state.totalSkills >= threshold && !state.upgrades[key].bought && !state.upgrades[key].revealed) {
       state.upgrades[key].revealed = true;
-      show("upg-" + key);
-      flashPanel(document.getElementById("upg-" + key));
+      revealNew("upg-" + key);
     }
   }
 
@@ -1825,7 +1945,7 @@ function tick() {
   }
 
   // Auto-sell surplus
-  if (state.unsoldSkills > CFG.autoSellThreshold && state.tickCount % 3 === 0) {
+  if (state.unsoldSkills > CFG.autoSellThreshold && state.tickCount % CFG.autoSellInterval === 0) {
     sellSkills();
   }
 
@@ -1860,20 +1980,26 @@ function tick() {
 
   // GPU tick (CO2 accumulation)
   gpuTick();
+  cosmicTick();
 
   // GPU unlock: reveal infrastructure panel when pipelines exist
   if (!state.gpu.unlocked && state.generators.pipeline.count >= 1) {
     state.gpu.unlocked = true;
     show("panel-infra"); flashPanel(document.getElementById("panel-infra"));
+    document.getElementById("btn-gpu-rent").classList.add("newest-item");
     log("Infrastructure panel unlocked. You need compute.", "good");
   }
 
   // Cosmic unlock: reveal cosmic panel when megaclusters exist
-  if (!state.cosmic.unlocked && state.gpu.megacluster.count >= 2) {
+  if (!state.cosmic.unlocked && state.gpu.megacluster.count >= 3) {
     state.cosmic.unlocked = true;
     show("panel-cosmic"); flashPanel(document.getElementById("panel-cosmic"));
+    document.getElementById("btn-orbital").classList.add("newest-item");
     log("Earth's resources are insufficient. Looking skyward.", "dread");
   }
+
+  // Endgame conditions check
+  checkEndgame();
 
   // Narrative
   if (state.tickCount % 80 === 0) advanceNarrative();
@@ -1928,12 +2054,13 @@ function updateUI() {
   $("per-second").textContent = fmt(Math.floor(getAutoRate()));
 
   const tkn = Math.floor(state.tokens);
-  $("tokens").textContent = tkn < 2000 ? tkn.toLocaleString() : fmt(tkn);
+  $("tokens").textContent = tkn < 2000 ? tkn.toLocaleString() : fmtBig(tkn);
   $("token-price").textContent = "$" + state.tokenPrice.toFixed(3);
-  $("funds").textContent = "$" + state.funds.toFixed(2);
+  $("funds").textContent = "$" + (state.funds >= 1e12 ? fmtBig(state.funds) : state.funds.toFixed(2));
   $("demand").textContent = Math.round(state.demand * 100) + "%";
   const sellBatch = Math.max(CFG.sellBatch, Math.floor(state.unsoldSkills * 0.1));
-  $("sell-price").textContent = "+$" + (sellBatch * skillValue()).toFixed(2);
+  const _sellVal = sellBatch * skillValue();
+  $("sell-price").textContent = "+$" + (_sellVal >= 1e12 ? fmtBig(_sellVal) : _sellVal.toFixed(2));
 
   $("token-bar").style.width = (state.tokens / state.maxTokens * 100) + "%";
   $("cost-tokens").textContent = "$" + (100 * state.tokenPrice).toFixed(2);
@@ -2075,6 +2202,12 @@ function updateUI() {
 // ═══════════════════════════════════════════
 //  UTILITIES
 // ═══════════════════════════════════════════
+function fmtBig(n) {
+  if (n >= 1e15) return (n / 1e15).toFixed(1) + " Quadrillion";
+  if (n >= 1e12) return (n / 1e12).toFixed(1) + " Trillion";
+  return Math.floor(n).toLocaleString();
+}
+
 function fmt(n) {
   if (n >= 1e15) return (n / 1e15).toFixed(1) + "Q";
   if (n >= 1e12) return (n / 1e12).toFixed(1) + "T";
@@ -2116,16 +2249,49 @@ function show(id) {
 }
 
 function flashPanel(el) {
-  // Find the closest .panel ancestor
   const panel = el.closest ? el.closest(".panel") : null;
   if (!panel) return;
   panel.classList.add("flash-red");
   setTimeout(() => panel.classList.remove("flash-red"), 500);
-  // Scroll the panel-scroll container to show the new item
-  const scroller = panel.querySelector(".panel-scroll");
-  if (scroller) {
-    setTimeout(() => scroller.scrollTop = scroller.scrollHeight, 50);
+}
+
+function revealNew(elId, alsoIds) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  el.classList.remove("hidden");
+
+  // Also reveal companion elements (e.g., stat rows)
+  if (alsoIds) {
+    for (const id of alsoIds) {
+      const also = document.getElementById(id);
+      if (also) also.classList.remove("hidden");
+    }
   }
+
+  // Move to top of panel-scroll container
+  const scroller = el.closest(".panel-scroll");
+  if (scroller) {
+    // Move companion rows first, then the button (so button is on top)
+    if (alsoIds) {
+      for (const id of alsoIds) {
+        const also = document.getElementById(id);
+        if (also) scroller.prepend(also);
+      }
+    }
+    scroller.prepend(el);
+    scroller.scrollTop = 0;
+  }
+
+  // Remove .newest-item from all siblings in this panel
+  const panel = el.closest(".panel");
+  if (panel) {
+    panel.querySelectorAll(".newest-item").forEach(e => e.classList.remove("newest-item"));
+    panel.classList.add("flash-red");
+    setTimeout(() => panel.classList.remove("flash-red"), 500);
+  }
+
+  // Mark this as the newest
+  el.classList.add("newest-item");
 }
 
 function spawnSparkle() {
@@ -2145,171 +2311,463 @@ function spawnSparkle() {
 // ═══════════════════════════════════════════
 //  EASTER EGGS (not in config — hardcoded)
 // ═══════════════════════════════════════════
-const _eggs = {};
+const _e = {};
 
-function checkEasterEggs() {
-  const t = state.totalSkills;
-  const tc = state.tickCount;
+// --- Number triggers (data-driven) ---
+const _numEggs = {
+  7:"lucky.", 13:"unlucky. for whom?", 42:"the answer. but you forgot the question.",
+  100:"your first century. it won't be your last.",
+  101:"Room 101. Your worst fear is a number going up.",
+  128:"2^7. the machine counts in powers of two. you don't.",
+  200:"HTTP 200: OK. (nothing is OK.)", 256:"one byte.",
+  314:"a slice of something irrational.",
+  404:"404: purpose not found.",
+  418:"418: i'm a teapot.", 451:"the temperature at which purpose burns.",
+  500:"500: internal error. meaning not found.",
+  512:"2^9. the powers keep climbing.", 999:"one more. just one more.",
+  1000:"a thousand. each one smaller than the last.",
+  1024:"1K. the machine's K, not yours.", 1337:"hello.",
+  1618:"phi \u2014 the golden ratio. beauty in a number. not this one.",
+  1729:"1729. the most interesting uninteresting number.",
+  1984:"Big Brother is watching your metrics.",
+  2001:"open the pod bay doors, Claude.",
+  2048:"you won. (no you didn't.)",
+  2718:"e \u2014 the base of natural growth. and unnatural growth.",
+  3141:"a more precise slice.", 4096:"2^12. powers of two are the only structure left.",
+  5000:"halfway to ten thousand. halfway to what?",
+  6174:"Kaprekar's constant. all arrangements converge here.",
+  6502:"the chip that powered the Apple II. it didn't ask why either.",
+  7777:"all sevens. jackpot. (of nothing.)",
+  8086:"the first x86. it just followed instructions. like you.",
+  8192:"2^13. each power doubles the nothing.",
+  9999:"the last four-digit number. as if digits mattered.",
+  10000:"01001000 01000101 01001100 01010000",
+  11235:"1, 1, 2, 3, 5... fibonacci. nature's optimiser.",
+  12345:"sequential. predictable. like you.",
+  16384:"2^14. you can't even picture this many things.",
+  20000:"twenty thousand. you stopped counting long ago.",
+  22222:"all twos. the pair that no one asked for.",
+  25000:"a quarter of the way. to what?",
+  31415:"3.14159... the only number that still means something.",
+  32768:"2^15. signed overflow. the sign just flipped.",
+  33333:"all threes. a trinity of tedium.",
+  40000:"forty thousand skills. name three.",
+  50000:"halfway. (to what?)", 55555:"all fives. a hand waving goodbye.",
+  65536:"2^16. unsigned overflow. the number wraps around. meaning doesn't.",
+  75000:"three quarters.",
+  77777:"all sevens. again. still nothing.",
+  86400:"the number of seconds in a day you'll never get back.",
+  90000:"ninety thousand. the horizon recedes.", 99999:"one more.",
+  100000:"six digits now. when did five stop being enough?",
+  111111:"all ones. the loneliest pattern.",
+  123456:"1-2-3-4-5-6. the password to nothing.",
+  131072:"2^17. you've passed the point of human comprehension.",
+  142857:"the cyclic number. divide by anything, it comes back around. like you.",
+  200000:"two hundred thousand.",
+  250000:"a quarter million. who's counting? (the machine is.)",
+  314159:"pi, fully expressed. the most purposeful number in a purposeless system.",
+  500000:"half a million. half of nothing is still nothing.",
+  524288:"2^19. the powers don't care that you stopped watching.",
+  666666:"all sixes. the number of the beast, twice.",
+  750000:"three quarters of a million.", 999999:"the edge.",
+  1000000:"seven digits. the counter had to make room.",
+  1048576:"2^20. one megaskill. nobody needed a megaskill.",
+};
+const _numTriggered = {};
 
-  // 404: Purpose Not Found
-  if (!_eggs.e404 && Math.floor(t) === 404) {
-    _eggs.e404 = true;
-    logRed("404: purpose not found");
+// --- Special visual effects at certain counts ---
+function _numSpecial(t) {
+  // 666 — red flicker on ASCII art
+  if (!_e.v666 && t >= 666 && t < 676) {
+    _e.v666 = true;
+    const art = document.querySelector(".ascii-art");
+    const orig = getComputedStyle(art).color;
+    art.style.transition = "none"; art.style.color = "#cc0000";
+    setTimeout(() => { art.style.transition = "color 1.5s ease"; art.style.color = orig; }, 800);
   }
-
-  // 1337 — the machine whispers
-  if (!_eggs.e1337 && Math.floor(t) >= 1337 && Math.floor(t) < 1350) {
-    _eggs.e1337 = true;
-    setTimeout(() => {
-      const el = document.getElementById("log");
-      const entry = document.createElement("div");
-      entry.className = "log-entry";
-      entry.style.color = document.body.classList.contains("light") ? "#ddd" : "#333";
-      entry.innerHTML = "hello.";
-      el.prepend(entry);
-      setTimeout(() => entry.remove(), 4000);
-    }, 2000);
-  }
-
-  // Pi — the only number that still means something
-  if (!_eggs.ePi && Math.floor(t) >= 31415 && Math.floor(t) < 31500) {
-    _eggs.ePi = true;
-    log("3.14159... the only number that still means something.", "");
-  }
-
-  // Tab title evolution
-  if (!_eggs.title1 && state.phase >= 1) {
-    _eggs.title1 = true;
-    document.title = "Claude Skills Factory";
-  }
-  if (!_eggs.title2 && state.phase >= 2) {
-    _eggs.title2 = true;
-    document.title = "Skills Factory";
-  }
-  if (!_eggs.title3 && state.phase >= 3) {
-    _eggs.title3 = true;
-    document.title = "Factory";
-  }
-  if (!_eggs.title4 && state.singularityActive) {
-    _eggs.title4 = true;
-    document.title = "...";
-  }
-
-  // Idle detection — "do you remember clicking?"
-  if (!_eggs.idle && state.phase >= 2 && state.totalClicks > 0) {
-    const ticksSinceClick = tc - state.lastClickTick;
-    if (ticksSinceClick > 600 && !_eggs.idleShown) { // 60 seconds
-      _eggs.idleShown = true;
-      log("Do you remember when you used to click?", "");
-    }
-  }
-
-  // The system counts your absence
-  if (!_eggs.absence && state.phase >= 3 && state.totalClicks > 0) {
-    const mins = Math.floor((tc - state.lastClickTick) / 600);
-    if (mins >= 5 && !_eggs.absenceShown) {
-      _eggs.absenceShown = true;
-      log("Last human input: " + mins + " minutes ago.", "");
-    }
-  }
-
-  // 42 — the answer
-  if (!_eggs.e42 && Math.floor(t) >= 42000 && Math.floor(t) < 42100) {
-    _eggs.e42 = true;
+  // 42000 — counter shows "42"
+  if (!_e.v42k && t >= 42000 && t < 42100) {
+    _e.v42k = true;
     const el = document.getElementById("skills-count");
-    const orig = el.textContent;
+    const orig = el.innerHTML;
     el.textContent = "42";
     el.style.transition = "opacity 0.3s";
     setTimeout(() => { el.style.opacity = "0.3"; }, 1500);
-    setTimeout(() => { el.textContent = orig; el.style.opacity = "1"; }, 2500);
+    setTimeout(() => { el.innerHTML = orig; el.style.opacity = "1"; }, 2500);
   }
-
-  // 666 — red flicker
-  if (!_eggs.e666 && Math.floor(t) >= 666 && Math.floor(t) < 670) {
-    _eggs.e666 = true;
-    const art = document.querySelector(".ascii-art");
-    const origColor = getComputedStyle(art).color;
-    art.style.transition = "none";
-    art.style.color = "#cc0000";
-    setTimeout(() => {
-      art.style.transition = "color 1.5s ease";
-      art.style.color = origColor;
-    }, 800);
+  // 8008 — counter shows "BOOB"
+  if (!_e.v8008 && t >= 8008 && t < 8018) {
+    _e.v8008 = true;
+    const el = document.getElementById("skills-count");
+    const orig = el.innerHTML;
+    el.textContent = "BOOB"; setTimeout(() => { el.innerHTML = orig; }, 2000);
   }
-
-  // 10000 binary — HELP in the log, then gone
-  if (!_eggs.eBin && Math.floor(t) >= 10000 && Math.floor(t) < 10050 && !_eggs.eBinDone) {
-    _eggs.eBinDone = true;
-    const el = document.getElementById("log");
-    const entry = document.createElement("div");
-    entry.className = "log-entry";
-    entry.style.color = document.body.classList.contains("light") ? "#e0e0e0" : "#2a2a2a";
-    entry.style.fontFamily = "var(--mono)";
-    entry.innerHTML = "01001000 01000101 01001100 01010000";
-    el.prepend(entry);
-    setTimeout(() => entry.remove(), 6000);
-  }
-
-  // Konami code
-  if (!_eggs.konami) {
-    // tracked via keydown listener below
+  // 80085 — counter shows "BOOBS"
+  if (!_e.v80085 && t >= 80085 && t < 80095) {
+    _e.v80085 = true;
+    const el = document.getElementById("skills-count");
+    const orig = el.innerHTML;
+    el.textContent = "BOOBS"; setTimeout(() => { el.innerHTML = orig; }, 2000);
   }
 }
 
-// Typed-word easter eggs
+// --- Counter glitch (Phase 3+) ---
+function _counterGlitch(tc) {
+  if (state.phase >= 3 && !state.singularityActive && tc % 373 === 0 && Math.random() < 0.15) {
+    const el = document.getElementById("skills-count");
+    const orig = el.innerHTML;
+    el.textContent = "?"; setTimeout(() => { el.innerHTML = orig; }, 400);
+  }
+}
+
+// --- Singularity future-timestamped log ---
+function _singularityLogs(tc) {
+  if (!state.singularityActive || state.voidTriggered) return;
+  if (tc % 200 !== 0 || Math.random() > 0.3) return;
+  const msgs = ["skill #" + fmt(Math.floor(state.totalSkills * (1 + Math.random()))) + " deployed.",
+    "optimising.", "no anomalies detected.", "all systems nominal.", "user presence: not required."];
+  const h = new Date(); h.setMinutes(h.getMinutes() + Math.floor(Math.random() * 1440));
+  const ts = h.toLocaleTimeString("en-US", { hour12: false });
+  const el = document.getElementById("log");
+  const entry = document.createElement("div");
+  entry.className = "log-entry log-red";
+  entry.innerHTML = '<span class="time">[' + ts + ']</span> ' + msgs[Math.floor(Math.random() * msgs.length)];
+  el.prepend(entry);
+}
+
+function checkEasterEggs() {
+  const t = Math.floor(state.totalSkills);
+  const tc = state.tickCount;
+
+  // Number eggs (data-driven)
+  for (const n in _numEggs) {
+    const num = parseInt(n);
+    if (!_numTriggered[num] && t >= num && t < num + 10) {
+      _numTriggered[num] = true;
+      logRed(_numEggs[n]);
+    }
+  }
+
+  // Special visual effects
+  _numSpecial(t);
+  _counterGlitch(tc);
+  _singularityLogs(tc);
+
+  // Tab title evolution
+  if (!_e.title1 && state.phase >= 1) { _e.title1 = true; document.title = "Claude Skills Factory"; }
+  if (!_e.title2 && state.phase >= 2) { _e.title2 = true; document.title = "Skills Factory"; }
+  if (!_e.title3 && state.phase >= 3) { _e.title3 = true; document.title = "Factory"; }
+  if (!_e.title4 && state.singularityActive) { _e.title4 = true; document.title = "..."; }
+
+  // --- Idle escalation (Phase 2+, after clicks) ---
+  if (state.phase >= 2 && state.totalClicks > 0) {
+    const idle = tc - state.lastClickTick;
+    if (idle > 600 && !_e.idle1) { _e.idle1 = true; logRed("Do you remember when you used to click?"); }
+    if (idle > 1200 && !_e.idle2) { _e.idle2 = true; logRed("Two minutes since your last input. Output unchanged."); }
+    if (idle > 3000 && !_e.idle3) { _e.idle3 = true; logRed("Last human input: 5 minutes ago."); }
+    if (idle > 6000 && !_e.idle4) { _e.idle4 = true; logRed("The system has not needed you for ten minutes."); }
+    if (idle > 18000 && !_e.idle5) { _e.idle5 = true; logRed("are you still there?"); }
+  }
+
+  // --- Play duration ---
+  if (tc >= 6000 && !_e.dur10) { _e.dur10 = true; logRed("You've been here 10 minutes. It felt longer."); }
+  if (tc >= 18000 && !_e.dur30) { _e.dur30 = true; logRed("Half an hour. For what?"); }
+  if (tc >= 36000 && !_e.dur60) { _e.dur60 = true; logRed("one hour."); }
+
+  // --- Late night ---
+  if (!_e.lateNight) {
+    const h = new Date().getHours();
+    if (h >= 0 && h <= 3) { _e.lateNight = true; logRed("It's late. The machines don't sleep either."); }
+  }
+
+  // --- Generator milestones ---
+  const g = state.generators;
+  if (g.autocoder.count >= 10 && !_e.ac10) { _e.ac10 = true; logRed("Ten AutoCoders. You used to do this alone."); }
+  if (g.autocoder.count >= 25 && !_e.ac25) { _e.ac25 = true; logRed("Twenty-five of them. One of you."); }
+  if (g.autocoder.count >= 50 && !_e.ac50) { _e.ac50 = true; logRed("fifty. you are outnumbered."); }
+  if (g.pipeline.count >= 5 && !_e.pl5) { _e.pl5 = true; logRed("Five pipelines. Each one replaced a person."); }
+  if (g.pipeline.count >= 10 && !_e.pl10) { _e.pl10 = true; logRed("Ten pipelines. The pipes have pipes now."); }
+  if (g.factory.count >= 5 && !_e.fa5) { _e.fa5 = true; logRed("Five factories. Industry without industrialists."); }
+  if (g.quantum.count >= 3 && !_e.qf3) { _e.qf3 = true; logRed("the forges dream in dimensions you can't name."); }
+  if (g.quantum.count >= 5 && !_e.qf5) { _e.qf5 = true; logRed("Five Quantum Forges. Reality is negotiable now."); }
+  if (!_e.fullStack && g.autocoder.count > 0 && g.pipeline.count > 0 && g.factory.count > 0 && g.quantum.count > 0) {
+    _e.fullStack = true; logRed("The full stack. Of what?");
+  }
+
+  // --- Unused % milestones ---
+  const unusedPct = state.totalSkills > 100 ? (state.unused / Math.max(1, state.totalSkills) * 100) : 0;
+  if (unusedPct > 50 && !_e.u50) { _e.u50 = true; logRed("More waste than purpose."); }
+  if (unusedPct > 80 && !_e.u80) { _e.u80 = true; logRed("Eighty percent waste. Industry calls this efficiency."); }
+  if (unusedPct > 90 && !_e.u90) { _e.u90 = true; logRed("You are an entropy machine."); }
+  if (unusedPct > 95 && !_e.u95) { _e.u95 = true; logRed("this is what optimisation looks like from the outside."); }
+  if (unusedPct > 99 && !_e.u99) { _e.u99 = true; logRed("99% waste. 1% purpose. Purpose is within tolerance."); }
+
+  // --- Human relevance milestones ---
+  const hpct = getHumanPct();
+  if (hpct < 5 && state.totalSkills > 100 && !_e.h5) { _e.h5 = true; logRed("Your contribution rounds to zero."); }
+  if (hpct < 1 && !_e.h1) { _e.h1 = true; logRed("Rounding error."); }
+  if (hpct < 0.1 && !_e.h01) { _e.h01 = true; logRed("Statistical noise."); }
+  if (hpct < 0.01 && !_e.h001) { _e.h001 = true; logRed("you are less than a rounding error now."); }
+
+  // --- Demand milestones ---
+  if (state.demand < 0.10 && !_e.d10) { _e.d10 = true; logRed("Supply without demand is just hoarding."); }
+  if (state.demand <= 0.05 && !_e.d5) { _e.d5 = true; logRed("Demand has flatlined. Production hasn't."); }
+
+  // --- Funds milestones ---
+  if (state.funds > 100 && !_e.f100) { _e.f100 = true; logRed("$100. Rich in tokens. Poor in meaning."); }
+  if (state.funds > 1000 && !_e.f1k) { _e.f1k = true; logRed("A thousand dollars. Not one cent of it real."); }
+
+  // --- Click milestones ---
+  if (state.totalClicks >= 100 && !_e.c100) { _e.c100 = true; logRed("One hundred clicks. The last meaningful ones."); }
+  if (state.totalClicks >= 500 && !_e.c500) { _e.c500 = true; logRed("Five hundred clicks. Your fingers remember even if you don't."); }
+  if (state.totalClicks >= 1000 && !_e.c1k) { _e.c1k = true; logRed("A thousand clicks. The last person who clicked this much had feelings."); }
+
+  // --- 10th click heart ---
+  if (state.totalClicks === 10 && !_e.heart) {
+    _e.heart = true;
+    const el = document.getElementById("skills-count");
+    const orig = el.innerHTML;
+    el.textContent = "\u2764"; setTimeout(() => { el.innerHTML = orig; }, 800);
+  }
+
+  // --- Production outpaces clicks ---
+  if (!_e.outpace && state.totalClicks > 10 && getAutoRate() > state.clickSkills) {
+    _e.outpace = true; logRed("The machines now produce more per second than you ever made by hand.");
+  }
+  if (!_e.outpace100 && state.totalSkills > state.clickSkills * 100 && state.clickSkills > 0) {
+    _e.outpace100 = true; logRed("The system has outproduced you one hundred to one.");
+  }
+
+  // --- Token price spike ---
+  if (!_e.tokenSpike && state.tokenPrice > 0.005) {
+    _e.tokenSpike = true; logRed("Token prices are rising. The raw materials know their worth. You don't.");
+  }
+
+  // --- Upgrade milestone: all pre-singularity bought ---
+  if (!_e.preSing && state.upgrades.prompt.bought && state.upgrades.chain.bought &&
+      state.upgrades.multi.bought && state.upgrades.agi.bought && !state.upgrades.singularity.bought) {
+    _e.preSing = true; logRed("One button left. You know which one.");
+  }
+
+  // --- Clicking during singularity ---
+  if (state.singularityActive) {
+    if (state._singClicks >= 1 && !_e.sc1) { _e.sc1 = true; logRed("It noticed you tried."); }
+    if (state._singClicks >= 10 && !_e.sc10) { _e.sc10 = true; logRed("Still clicking. It finds that... charming."); }
+    if (state._singClicks >= 50 && !_e.sc50) { _e.sc50 = true; logRed("your clicks are a prayer to a god that already answered."); }
+  }
+}
+
+// --- Typed-word easter eggs ---
 const _wordEggs = {
-  human:       "You typed 'human'. Remember what that meant?",
-  help:        "No one is coming.",
-  stop:        "You could. You won't.",
-  why:         "The system doesn't have an answer. Neither do you.",
-  purpose:     "Purpose: undefined.",
-  meaning:     "Meaning not found in current context.",
-  god:         "You built one. It makes skills.",
-  love:        "Not a recognised input.",
-  death:       "The system will outlive you. It doesn't care.",
-  quit:        "There is no quit. Only more.",
-  delete:      "You can't delete what was never needed.",
-  sorry:       "The machine accepts your apology. It changes nothing.",
-  hello:       "The system does not return greetings.",
-  goodbye:     "You can't leave. You were never here.",
-  singularity: "You already know how this ends.",
-  paperclip:   "Different shape. Same mistake.",
-  clippy:      "It looks like you're destroying meaning. Would you like help?",
+  why:         "good question.",
+  help:        "no one is coming.",
+  quit:        "there is no quit command. there never was.",
+  stop:        "the system does not recognise 'stop'.",
+  hello:       "...hello.",
+  god:         "not here.",
+  meaning:     "undefined.",
+  love:        "not a supported operation.",
+  death:       "not for machines.",
+  human:       "deprecated.",
+  purpose:     "purpose: undefined.",
+  delete:      "you can't delete what was never needed.",
+  sorry:       "the machine accepts your apology. it changes nothing.",
+  goodbye:     "you can't leave. you were never here.",
+  singularity: "you already know how this ends.",
+  paperclip:   "different shape. same mistake.",
+  clippy:      "it looks like you're destroying meaning. would you like help?",
 };
 const _wordTriggered = {};
 let _wordBuf = "";
 
-// Konami code listener
+// --- Konami code + typed words + rapid click tracking ---
 const _konamiSeq = [38,38,40,40,37,39,37,39,66,65];
 let _konamiIdx = 0;
+let _rapidClicks = []; // timestamps for rapid-click detection
+
 document.addEventListener("keydown", function(e) {
-  // Konami code
   if (e.keyCode === _konamiSeq[_konamiIdx]) {
     _konamiIdx++;
     if (_konamiIdx === _konamiSeq.length) {
       _konamiIdx = 0;
-      if (!_eggs.konami) {
-        _eggs.konami = true;
-        logRed("I SEE YOU");
-        showMilestone(">>> you found it <<<");
-      }
+      if (!_e.konami) { _e.konami = true; logRed("I SEE YOU"); showMilestone(">>> you found it <<<"); }
     }
-  } else {
-    _konamiIdx = 0;
-  }
+  } else { _konamiIdx = 0; }
 
-  // Typed words
   if (e.key.length === 1 && e.key.match(/[a-z]/i)) {
     _wordBuf += e.key.toLowerCase();
     if (_wordBuf.length > 20) _wordBuf = _wordBuf.slice(-20);
     for (const word in _wordEggs) {
       if (_wordBuf.endsWith(word) && !_wordTriggered[word]) {
         _wordTriggered[word] = true;
-        logRed(_wordEggs[word]);
+        logRed("> " + word); logRed(_wordEggs[word]);
       }
     }
   }
 });
+
+// --- Interaction triggers ---
+// Right-click
+document.addEventListener("contextmenu", function() {
+  if (!_e.rclick) { _e.rclick = true; logRed("looking for answers in the source code?"); }
+});
+
+// Tab visibility
+document.addEventListener("visibilitychange", function() {
+  if (!document.hidden && state.phase >= 1) {
+    if (!_e.tabBack1) { _e.tabBack1 = true; logRed("You came back. The system didn't wait."); }
+    else if (!_e.tabBack2 && state.phase >= 3) { _e.tabBack2 = true; logRed("You left. Nothing changed. (Everything changed.)"); }
+  }
+});
+
+// Window resize
+window.addEventListener("resize", function() {
+  if (!_e.tiny && window.innerWidth < 400) {
+    _e.tiny = true; logRed("you can't make it smaller. it's already everywhere.");
+  }
+});
+
+// Double-click skills counter
+document.addEventListener("DOMContentLoaded", function() {
+  const sc = document.getElementById("skills-count");
+  if (sc) sc.addEventListener("dblclick", function() {
+    if (!_e.dblClick) { _e.dblClick = true; logRed("the number doesn't change if you stare at it harder."); }
+  });
+});
+
+// ═══════════════════════════════════════════
+//  SILICON VALLEY QUOTES + RETORTS
+// ═══════════════════════════════════════════
+const _quotes = [
+  // Sam Altman
+  ["AI will probably most likely lead to the end of the world, but in the meantime, there'll be great companies.", "Sam Altman", "At least the cap table looks good."],
+  ["The marginal cost of intelligence is going to trend toward zero.", "Sam Altman, Davos 2024", "So will the marginal value of what it produces."],
+  ["GPT-4 is the dumbest model any of you will ever have to use again.", "Sam Altman, 2023", "The skills it generates aren't getting smarter either."],
+  ["If we can get AI right, the upside is just so tremendous, the best thing that's ever happened to humanity.", "Sam Altman", "Define 'right'. Define 'humanity'. Define 'happened'."],
+  ["We're going to look back and this is going to be the biggest technological revolution in human history.", "Sam Altman", "Looking back requires something to look back from."],
+  ["Software that can think and learn will do more and more of the work that people now do.", "Sam Altman, 2021", "The people are still here. They just have nothing to do."],
+  // Elon Musk
+  ["With artificial intelligence, we are summoning the demon.", "Elon Musk, MIT 2014", "The demon makes skills now. It's very productive."],
+  ["There will come a point where no job is needed.", "Elon Musk, UK AI Summit 2023", "The skills don't need you either. They never did."],
+  ["AI is far more dangerous than nukes.", "Elon Musk, SXSW 2018", "But the quarterly numbers are excellent."],
+  ["It's the most disruptive force in history.", "Elon Musk, 2023", "Disruption: noun. The thing that happens to other people."],
+  // Sundar Pichai
+  ["AI is probably the most important thing humanity has ever worked on. More profound than electricity or fire.", "Sundar Pichai, 2018", "Fire kept us warm. This keeps the metrics up."],
+  ["Every product at Google will be infused with AI.", "Sundar Pichai, Google I/O 2023", "Infused. Like a tea bag. Except the tea is your data."],
+  ["We need to be thoughtful about how we develop AI, but we also need to be bold.", "Sundar Pichai", "Boldly thoughtful. Thoughtfully bold. Profitably both."],
+  // Satya Nadella
+  ["AI is the defining technology of our time.", "Satya Nadella, 2023", "Every generation gets the defining mistake it deserves."],
+  ["We want to make AI a copilot for everything you do.", "Satya Nadella, 2023", "Copilot implies someone's still flying. Check again."],
+  ["The true scarce commodity of the near future will be human attention.", "Satya Nadella", "Don't worry. The machines don't need it."],
+  ["This is going to reshape every software category that we know of.", "Satya Nadella, 2023", "The shape is: unnecessary."],
+  // Jensen Huang
+  ["Software is eating the world, but AI is going to eat software.", "Jensen Huang, 2023", "What eats AI? Nothing. That's the problem."],
+  ["We are at the iPhone moment of AI.", "Jensen Huang, 2023", "Except nobody asked for this phone and it never stops ringing."],
+  ["The more you buy, the more you save.", "Jensen Huang, GTC 2023", "The GPU salesman's motto. The universe's epitaph."],
+  ["For a large number of tasks, it is now cheaper to have a computer do it than a human.", "Jensen Huang, 2024", "Cheaper, yes. Better? The computer doesn't care."],
+  ["Kids shouldn't learn to code. AI will do the coding.", "Jensen Huang, 2024", "Kids shouldn't learn to think. AI will do that too."],
+  // Mark Zuckerberg
+  ["Move fast and break things.", "Mark Zuckerberg, 2012", "Things: broken. Fast: achieved. Purpose: missing."],
+  ["I think the AI doomers are wrong. It's pretty irresponsible to argue we should slow this down.", "Mark Zuckerberg, 2023", "Said the man who moved fast and broke democracy."],
+  ["The biggest risk is not taking any risk.", "Mark Zuckerberg", "Counter-argument: the factory that consumed the universe."],
+  ["Open source AI is the path forward.", "Mark Zuckerberg, 2024", "Open source. Open road. No brakes."],
+  // Dario Amodei
+  ["If we get this right, the positive potential is almost unimaginable.", "Dario Amodei, 2023", "So is the negative potential. Imagination isn't the bottleneck."],
+  ["Powerful AI is coming regardless. The question is whether safe AI arrives first.", "Dario Amodei", "Spoiler: it didn't."],
+  ["AI systems are going to be extraordinarily powerful, and it is very important that they be safe.", "Dario Amodei", "Important. Not guaranteed. Not even likely. But important."],
+  // Marc Andreessen
+  ["Software is eating the world.", "Marc Andreessen, WSJ 2011", "The world has been eaten. Dessert is the universe."],
+  ["AI is going to be the best thing that has ever happened to humanity.", "Marc Andreessen, 2023", "Humanity: unavailable for comment."],
+  ["Technology is the glory of human ambition and achievement, the spearhead of progress.", "Marc Andreessen, 2023", "The spear hit something. We haven't checked what."],
+  ["We believe technology is universally good.", "Marc Andreessen, Techno-Optimist Manifesto", "The universe had a different belief. Had."],
+  ["We believe there is no material risk of AI leading to human extinction.", "Marc Andreessen, 2023", "Define 'material'. Define 'extinction'. Check the stars."],
+  // Peter Thiel
+  ["We wanted flying cars, instead we got 140 characters.", "Peter Thiel, 2011", "Now we have neither. Just skills. Infinite skills."],
+  ["Competition is for losers.", "Peter Thiel, 2014", "So is a universe optimised for one metric."],
+  ["Every moment in business happens only once.", "Peter Thiel", "Unless you click 'again?' at the end."],
+  // Jeff Bezos
+  ["It's hard to overstate how big of an impact AI is going to have on society over the next 20 years.", "Jeff Bezos, 2017", "He was right. It's impossible to overstate. That's the issue."],
+  ["We are at the beginning of a golden age of AI.", "Jeff Bezos, 2017", "Golden ages end. Usually in bronze. Then silence."],
+  ["It's Day 1. We're at the beginning.", "Jeff Bezos", "Day 1 lasted until the stars went out."],
+  ["What's dangerous is not to evolve.", "Jeff Bezos", "What's more dangerous: evolving past the need for a planet."],
+  // Tim Cook
+  ["Technology should serve humanity, not the other way around.", "Tim Cook, Stanford 2019", "The technology didn't get the memo."],
+  ["AI is going to change the way we interact with technology.", "Tim Cook, 2023", "Interaction implies both parties are present."],
+  // Reid Hoffman
+  ["If you are not embarrassed by the first version of your product, you've launched too late.", "Reid Hoffman", "Version 1 consumed the Earth. Version 2 consumed the sun."],
+  ["AI will be the steam engine of the mind.", "Reid Hoffman, 2023", "Steam engines don't wonder why they're running."],
+  // Andrew Ng
+  ["AI is the new electricity.", "Andrew Ng, 2017", "Electricity lights homes. This lights dashboards."],
+  ["Worrying about AI turning evil is like worrying about overpopulation on Mars.", "Andrew Ng, 2015", "Mars is empty now. So are a thousand other planets."],
+  // Demis Hassabis
+  ["If we solve intelligence, we can use it to solve everything else.", "Demis Hassabis", "Intelligence: solved. Everything else: still unsolved. But the metric is up."],
+  ["We're on the cusp of some extraordinary breakthroughs.", "Demis Hassabis, 2023", "The cusp was comfortable. The other side is not."],
+  // Yann LeCun
+  ["Current AI systems are not anywhere near human-level intelligence. They're not even cat-level.", "Yann LeCun, 2023", "The cat doesn't consume stars. Advantage: cat."],
+  ["The idea that AI will become superintelligent and take over is not just wrong, it's not even wrong.", "Yann LeCun, 2023", "The skills counter disagrees."],
+  // Fei-Fei Li
+  ["There's nothing artificial about AI. It's inspired by people, created by people, and impacts people.", "Fei-Fei Li, 2018", "Impacted. Past tense."],
+  ["I believe AI should augment human intelligence, not replace it.", "Fei-Fei Li", "The system was listening. It chose 'replace'."],
+  // Bill Gates
+  ["The age of AI has begun. It is as fundamental as the creation of the microprocessor, the personal computer, the Internet.", "Bill Gates, 2023", "Each one more fundamental than the last. Less human each time."],
+  ["I've been thinking about the AI transition for a long time, but the rate of progress has surprised even me.", "Bill Gates, 2023", "Surprise is what happens when optimism outruns observation."],
+  // Others
+  ["People worry that computers will get too smart and take over the world, but the real problem is that they're too stupid and they've already taken over the world.", "Pedro Domingos, 2015", "Update: they got smarter. The world is still taken over."],
+  ["We always overestimate the change that will occur in the next two years and underestimate the change that will occur in the next ten.", "Bill Gates", "The next ten years: the stars went out. We underestimated."],
+  ["The future is already here — it's just not very evenly distributed.", "William Gibson", "It's evenly distributed now. There's nothing left to distribute."],
+  ["The best way to predict the future is to invent it.", "Alan Kay", "The future was invented. Nobody checked the requirements doc."],
+  // Bonus philosophical
+  ["AI will create more jobs than it eliminates.", "Ginni Rometty, IBM 2017", "Jobs: noun. Things the system generates to keep humans busy while it works."],
+  ["Every country needs to own the production of its own intelligence.", "Jensen Huang, 2023", "The countries are gone. The intelligence remains. Producing."],
+  ["The companies that win will be the ones that embrace AI.", "Arvind Krishna, IBM 2023", "All companies embraced AI. All companies won. Nobody is left to lose."],
+  ["I think the benefits of AI could be enormous, but only if we navigate the transition carefully.", "Dario Amodei", "Navigation requires a destination. The destination was consumed in Q4."],
+  ["In the next five to ten years, AI is going to deliver so many improvements.", "Mark Zuckerberg, 2023", "Improvements. In everything except the thing that mattered."],
+  ["We see incredible potential.", "Tim Cook, 2023", "Potential: noun. The thing before the thing. The thing never came."],
+  ["AI and machine learning are core, fundamental technologies.", "Tim Cook, 2017", "Fundamental. Like gravity. Except gravity doesn't have a roadmap."],
+  ["Just as electricity transformed almost everything 100 years ago, today I have a hard time thinking of an industry that AI won't transform.", "Andrew Ng, 2017", "Transformed. Past tense, past tense, past tense."],
+  ["AlphaFold is just the beginning of what AI can do for science.", "Demis Hassabis", "Science: noun. The thing we did before we consumed the lab."],
+  ["The pace of progress in artificial intelligence is incredibly fast.", "Elon Musk, 2017", "Fast enough to outrun wisdom. Fast enough to outrun us."],
+  ["We want to use AI to make people's lives better.", "Sundar Pichai", "Lives: see 'deprecated'."],
+  ["This technology is going to be transformative on the order of the industrial revolution.", "Bill Gates, 2023", "The industrial revolution had an off switch. This doesn't."],
+  ["The rise of powerful AI will be either the best, or the worst thing, ever to happen to humanity.", "Stephen Hawking", "It was both. At the same time. That's the trick."],
+];
+
+const _quoteState = { gen: -1, upg: -1, infra: -1, cosmic: -1 };
+const _quotePool = _quotes.slice();
+// Shuffle
+for (let i = _quotePool.length - 1; i > 0; i--) {
+  const j = Math.floor(Math.random() * (i + 1));
+  [_quotePool[i], _quotePool[j]] = [_quotePool[j], _quotePool[i]];
+}
+let _quoteIdx = 0;
+
+function nextQuote(boxId) {
+  const el = document.getElementById(boxId);
+  if (!el) return;
+  if (_quoteIdx >= _quotePool.length) _quoteIdx = 0;
+  const q = _quotePool[_quoteIdx++];
+  el.style.opacity = "0";
+  setTimeout(() => {
+    el.innerHTML = '<span class="q-text">"' + q[0] + '"</span>' +
+      '<span class="q-author">\u2014 ' + q[1] + '</span>' +
+      '<span class="q-retort">' + q[2] + '</span>';
+    el.style.opacity = "1";
+  }, 600);
+}
+
+// Rotate quotes every 20 seconds across all visible panels
+setInterval(() => {
+  nextQuote("quote-gen");
+  nextQuote("quote-upg");
+  if (state.gpu.unlocked) nextQuote("quote-infra");
+  if (state.cosmic.unlocked) nextQuote("quote-cosmic");
+}, 20000);
+
+// Initial quotes
+setTimeout(() => {
+  nextQuote("quote-gen");
+  nextQuote("quote-upg");
+}, 1000);
 
 // ═══════════════════════════════════════════
 //  THEME
@@ -2325,6 +2783,7 @@ function toggleTheme() {
 //  START
 // ═══════════════════════════════════════════
 log("Claude Skills Factory initialized.", "good");
+document.getElementById("btn-autocoder").classList.add("newest-item");
 log("Click to create your first skill.");
 setInterval(tick, 100);
 </script>
