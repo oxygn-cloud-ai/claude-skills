@@ -506,9 +506,10 @@
   <div class="grid">
 
     <!-- Main Stats -->
-    <div class="panel">
+    <div class="panel" style="display:flex; flex-direction:column;">
       <h2>// Skills Created</h2>
       <span class="stat-value big" id="skills-count">0</span>
+      <div style="flex:1;"></div>
       <button class="btn-buy" id="btn-create" onclick="createSkill()">
         Create Skill <span style="font-size:11px; opacity:0.6">(why?)</span>
       </button>
@@ -531,7 +532,7 @@
     </div>
 
     <!-- Resources -->
-    <div class="panel">
+    <div class="panel" style="display:flex; flex-direction:column;">
       <h2>// Resources</h2>
       <div class="stat-row">
         <span class="stat-label">Tokens</span>
@@ -545,6 +546,7 @@
         <span class="stat-label">Funds</span>
         <span class="stat-value" id="funds">$10.00</span>
       </div>
+      <div style="flex:1;"></div>
       <button class="btn-buy" id="btn-buy-tokens" onclick="buyTokens()">
         Buy 100 tokens <span class="cost" id="cost-tokens">$0.30</span>
         <span class="btn-desc">Tokens are consumed to create skills. Every skill has a cost.</span>
