@@ -21,16 +21,31 @@ Install a skill. Type a slash command. Get superpowers.
 
 </div>
 
-## Available Skills
+## Contents
+
+This repo contains two types of content:
+
+### Claude Code Skills
+
+Slash-command skills installed via the root `./install.sh` into `~/.claude/skills/`.
 
 | Skill | Command | Description |
 |-------|---------|-------------|
 | **chk1** | `/chk1` | Adversarial implementation audit — fault-finding, risk-exposing, deviation-detecting review of recent changes |
-| **iterm2-tmux** | (standalone) | iTerm2 + tmux tab orchestration — one colored tab per repo directory |
+
+### Standalone Tools
+
+Scripts and utilities with their own installers. These are **not** Claude Code skills and are **not** installed via the root `./install.sh`.
+
+| Tool | Description | Install |
+|------|-------------|---------|
+| **iterm2-tmux** | iTerm2 + tmux tab orchestration — one coloured tab per repo directory (macOS only) | `cd skills/iterm2-tmux && ./install.sh` |
+
+See each tool's own `README.md` for full documentation and prerequisites.
 
 ## Prerequisites
 
-- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) installed and working
+- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) installed and working (for skills only)
 - `git` (required by most skills)
 - `bash` (macOS, Linux, or WSL on Windows)
 - `curl` (only for manual install method)
@@ -104,7 +119,7 @@ Options:
 
 ## How Skills Work
 
-Each skill lives in `skills/<name>/` and contains:
+Claude Code skills live in `skills/<name>/` and require a `SKILL.md`:
 
 ```
 skills/chk1/
@@ -113,7 +128,9 @@ skills/chk1/
   install.sh    <- Per-skill installer (optional, delegates to root)
 ```
 
-The installer copies `SKILL.md` to `~/.claude/skills/<name>/SKILL.md`, which Claude Code automatically discovers and makes available as a slash command.
+The root installer copies `SKILL.md` to `~/.claude/skills/<name>/SKILL.md`, which Claude Code automatically discovers and makes available as a slash command.
+
+Directories in `skills/` that lack a `SKILL.md` are standalone tools with their own installers and are ignored by the root `./install.sh`.
 
 ### SKILL.md Format
 
@@ -162,16 +179,21 @@ Every skill should support these subcommands:
 ```
 claude-skills/
   README.md            <- You are here
-  install.sh           <- Root installer
+  install.sh           <- Root installer (skills only)
   LICENSE              <- MIT
   _template/           <- Skeleton for new skills
     SKILL.md
     README.md
-  skills/              <- All skills live here
-    chk1/
+  skills/              <- All skills and tools live here
+    chk1/              <- Claude Code skill (has SKILL.md)
       SKILL.md
       README.md
       install.sh
+    iterm2-tmux/       <- Standalone tool (own installer, no SKILL.md)
+      install.sh
+      uninstall.sh
+      README.md
+      bin/
 ```
 
 ## Troubleshooting
