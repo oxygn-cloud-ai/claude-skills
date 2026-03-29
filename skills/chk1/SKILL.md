@@ -1,11 +1,11 @@
 ---
 name: chk1
-version: 1.1.0
+version: 2.0.0
 description: Adversarial Implementation Audit Mandate. Use when auditing recently implemented changes for bugs, risks, omissions, deviations, and unintended modifications. Fault-finding audit, not validation.
 user-invocable: true
 disable-model-invocation: true
-allowed-tools: Read, Grep, Glob, Bash(git *)
-argument-hint: [scope | help | doctor | version]
+allowed-tools: Read, Grep, Glob, Bash(git *), Write, Edit, AskUserQuestion
+argument-hint: [all | quick | security | scope | architecture | fix | help | doctor | version]
 ---
 
 # Adversarial Implementation Audit Mandate
@@ -19,24 +19,33 @@ Check $ARGUMENTS before proceeding. If it matches one of the following subcomman
 If $ARGUMENTS equals "help", "--help", or "-h", display the following usage guide and stop.
 
 ```
-chk1 v1.1.0 — Adversarial Implementation Audit
+chk1 v2.0.0 — Adversarial Implementation Audit
 
 USAGE
-  /chk1                     Audit the most recent implementation (auto-detects commits)
-  /chk1 <commit>..<commit>  Audit a specific commit range
-  /chk1 <branch>            Audit changes on a specific branch vs its base
+  /chk1                     Full audit (auto-detects recent changes)
+  /chk1 all                 Same as above
+  /chk1 quick               Bugs + risks only (fast pre-commit check)
+  /chk1 security            Deep security-focused audit (OWASP categories)
+  /chk1 scope               Scope compliance + omissions + unintended changes
+  /chk1 architecture        Pattern, boundary, coupling, consistency checks
+  /chk1 fix                 Deep resolution for issues found
+  /chk1 <commit>..<commit>  Full audit on a specific commit range
+  /chk1 <branch>            Full audit on branch changes vs base
   /chk1 help                Display this usage guide
-  /chk1 doctor              Check environment health and installation status
+  /chk1 doctor              Check environment health
   /chk1 version             Show installed version
 
-WHAT IT DOES
-  Fault-finding, risk-exposing, deviation-detecting audit of recently
-  implemented changes. Assumes the implementation is defective unless
-  proven otherwise. This is not a validation exercise.
+MODES
+  all            Full 8-section audit (default)
+  quick          Sections 2-3 only: bugs + risks
+  security       Deep security: injection, auth, data exposure, crypto
+  scope          Sections 4-5, 7-8: compliance, unintended, omissions
+  architecture   Section 6 expanded: patterns, boundaries, coupling
+  fix            Guided remediation for all findings
 
-AUDIT SECTIONS
+AUDIT SECTIONS (full mode)
   1. Functional Correctness Verification
-  2. Bug Detection (syntax, types, race conditions, resource leaks, etc.)
+  2. Bug Detection (syntax, types, race conditions, resource leaks)
   3. Critical Risk Assessment (security, data integrity, performance)
   4. Scope Compliance Verification
   5. Unintended Changes Detection
@@ -44,23 +53,13 @@ AUDIT SECTIONS
   7. Omissions Analysis
   8. Completeness Verification
 
-OUTPUT FORMAT
-  - Files Changed
-  - Per-File Analysis (with CORRECT / WARNING / BUG FOUND status)
-  - Bugs Found (numbered, with file and line references)
-  - Critical Risks (with severity and remediation)
-  - Unintended Changes
-  - Omissions
-  - Architectural Deviations
-  - Summary (blocked / permitted recommendation)
-  - Remediation Plan
-
 TOOLS USED
-  Read-only access: Read, Grep, Glob, Bash(git *)
-  No files are modified during the audit.
+  Audit: Read, Grep, Glob, Bash(git *)
+  Fix mode: + Write, Edit (to apply fixes)
 
 LOCATION
   ~/.claude/skills/chk1/SKILL.md
+  ~/.claude/commands/chk1/*.md (sub-commands)
 ```
 
 End of help output. Do not continue.
@@ -104,10 +103,29 @@ If any check is FAIL, advise the user on how to fix it. End of doctor output. Do
 If $ARGUMENTS equals "version", "--version", or "-v", output:
 
 ```
-chk1 v1.1.0
+chk1 v2.0.0
 ```
 
 End of version output. Do not continue.
+
+---
+
+## Routing
+
+If $ARGUMENTS matches a mode keyword, route to the corresponding sub-command:
+
+| Argument | Action |
+|----------|--------|
+| (empty) or `all` | Run full audit (all 8 sections below) |
+| `quick` | Run `/chk1:quick` — bugs + risks only |
+| `security` | Run `/chk1:security` — deep security audit |
+| `scope` | Run `/chk1:scope` — scope compliance + omissions |
+| `architecture` | Run `/chk1:architecture` — pattern + boundary audit |
+| `fix` | Run `/chk1:fix` — remediation for previous findings |
+
+If $ARGUMENTS doesn't match a mode keyword, treat it as a scope specifier (commit range, branch, SHA) and run the full audit on that scope.
+
+If sub-command files exist in `~/.claude/commands/chk1/`, invoke them via the Skill tool. Otherwise execute inline.
 
 ---
 
@@ -336,3 +354,13 @@ Issues:  N bugs, N risks, N unintended changes, N omissions
 Prepare a detailed, step-by-step plan to address every issue identified. If no issues found, state "No remediation required."
 
 Begin the audit immediately.
+
+---
+
+## After Every Run
+
+After producing the audit report (any mode), ask the user:
+
+> **Do you want help fixing the issues found?** If yes, I'll walk through each bug, risk, and deviation with specific code fixes you can apply directly.
+
+If the user says yes, invoke `/chk1:fix`.
