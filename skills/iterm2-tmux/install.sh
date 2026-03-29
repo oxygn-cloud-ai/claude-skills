@@ -19,7 +19,7 @@ if [ -t 1 ] && [ "${NO_COLOR:-}" = "" ]; then
   RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[0;33m'
   CYAN='\033[0;36m'; BOLD='\033[1m'; DIM='\033[2m'; RESET='\033[0m'
 else
-  RED=''; GREEN=''; YELLOW=''; CYAN=''; BOLD=''; RESET=''
+  RED=''; GREEN=''; YELLOW=''; CYAN=''; BOLD=''; DIM=''; RESET=''
 fi
 
 info()  { printf "${CYAN}info${RESET}  %s\n" "$*"; }
@@ -76,13 +76,13 @@ confirm() {
 prompt_with_default() {
   local prompt="$1" default="$2"
   if ! "$INTERACTIVE"; then
-    echo "$default"
+    REPLY="$default"
     return
   fi
-  printf "${GREEN}?${RESET} ${BOLD}%s${RESET} ${DIM}(%s)${RESET}${BOLD}:${RESET} " "$prompt" "$default" >&2
+  printf "${GREEN}?${RESET} ${BOLD}%s${RESET} ${DIM}(%s)${RESET}${BOLD}:${RESET} " "$prompt" "$default"
   local answer
   read -r answer
-  echo "${answer:-$default}"
+  REPLY="${answer:-$default}"
 }
 
 # --- Health check ---
@@ -204,7 +204,8 @@ if [ -f "$CONFIG_FILE" ]; then
   [ -n "$existing" ] && default_repos="$existing"
 fi
 
-repos_dir=$(prompt_with_default "Directory containing subdirectories for tmux sessions" "$default_repos")
+prompt_with_default "Directory containing subdirectories for tmux sessions" "$default_repos"
+repos_dir="$REPLY"
 
 # Expand ~
 repos_dir="${repos_dir/#\~/$HOME}"
