@@ -66,7 +66,7 @@ confirm() {
     warn "Non-interactive: skipping (use --force to override)"
     return 1
   fi
-  printf "%s [y/N] " "$prompt"
+  printf "\n${BOLD}>>>${RESET} %s [y/N] " "$prompt"
   local answer
   read -r answer
   [[ "$answer" =~ ^[Yy]$ ]]
@@ -79,7 +79,7 @@ prompt_with_default() {
     echo "$default"
     return
   fi
-  printf "%s [%s]: " "$prompt" "$default"
+  printf "\n${BOLD}>>>${RESET} %s [${DIM}%s${RESET}]: " "$prompt" "$default"
   local answer
   read -r answer
   echo "${answer:-$default}"
