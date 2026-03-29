@@ -1,0 +1,329 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# iterm2-tmux installer
+# Installs tmux+iTerm2 tab orchestration scripts.
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BIN_DIR="${SCRIPT_DIR}/bin"
+CONFIG_DIR="${HOME}/.config/iterm2-tmux"
+CONFIG_FILE="${CONFIG_DIR}/config"
+INSTALL_DIR="${INSTALL_DIR:-${HOME}/.local/bin}"
+TMUX_CONF="${HOME}/.tmux.conf"
+TMUX_RECOMMENDED="${SCRIPT_DIR}/tmux.conf.recommended"
+
+SCRIPTS=(tmux-iterm-tabs.sh tmux-attach-session.sh tmux-sessions.sh tmux-picker.sh gen-session-bg.py)
+
+# --- Colors ---
+if [ -t 1 ] && [ "${NO_COLOR:-}" = "" ]; then
+  RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[0;33m'
+  CYAN='\033[0;36m'; BOLD='\033[1m'; DIM='\033[2m'; RESET='\033[0m'
+else
+  RED=''; GREEN=''; YELLOW=''; CYAN=''; BOLD=''; RESET=''
+fi
+
+info()  { printf "${CYAN}info${RESET}  %s\n" "$*"; }
+ok()    { printf "${GREEN}  ok${RESET}  %s\n" "$*"; }
+warn()  { printf "${YELLOW}warn${RESET}  %s\n" "$*" >&2; }
+err()   { printf "${RED} err${RESET}  %s\n" "$*" >&2; }
+die()   { err "$@"; exit 1; }
+
+INTERACTIVE=true
+[ -t 0 ] || INTERACTIVE=false
+MODE="link"
+FORCE=false
+
+# --- Usage ---
+usage() {
+  cat <<EOF
+${BOLD}iterm2-tmux installer${RESET}
+
+${BOLD}USAGE${RESET}
+  ./install.sh              Interactive install (default: symlink)
+  ./install.sh --copy       Install by copying scripts
+  ./install.sh --link       Install by symlinking (default)
+  ./install.sh --check      Verify installation health
+  ./install.sh --uninstall  Remove installed scripts
+  ./install.sh --help       Show this help
+
+${BOLD}OPTIONS${RESET}
+  -f, --force     Skip confirmation prompts
+  INSTALL_DIR=... Override install directory (default: ~/.local/bin)
+
+${BOLD}EXAMPLES${RESET}
+  ./install.sh                          Interactive install with symlinks
+  ./install.sh --copy                   Copy scripts instead of symlinking
+  INSTALL_DIR=~/bin ./install.sh        Install to ~/bin
+  ./install.sh --check                  Verify everything is set up correctly
+EOF
+}
+
+# --- Confirm ---
+confirm() {
+  local prompt="$1"
+  "$FORCE" && return 0
+  if ! "$INTERACTIVE"; then
+    warn "Non-interactive: skipping (use --force to override)"
+    return 1
+  fi
+  printf "%s [y/N] " "$prompt"
+  local answer
+  read -r answer
+  [[ "$answer" =~ ^[Yy]$ ]]
+}
+
+# --- Prompt with default ---
+prompt_with_default() {
+  local prompt="$1" default="$2"
+  if ! "$INTERACTIVE"; then
+    echo "$default"
+    return
+  fi
+  printf "%s [%s]: " "$prompt" "$default"
+  local answer
+  read -r answer
+  echo "${answer:-$default}"
+}
+
+# --- Health check ---
+check_health() {
+  local issues=0
+
+  printf "\n${BOLD}iterm2-tmux health check${RESET}\n\n"
+
+  # Check config
+  if [ -f "$CONFIG_FILE" ]; then
+    ok "Config file exists: ${CONFIG_FILE}"
+    local repos_dir
+    repos_dir=$(grep '^TMUX_REPOS_DIR=' "$CONFIG_FILE" 2>/dev/null | cut -d= -f2- | tr -d '"' || true)
+    if [ -n "$repos_dir" ]; then
+      if [ -d "$repos_dir" ]; then
+        ok "Sessions directory exists: ${repos_dir}"
+      else
+        warn "Sessions directory missing: ${repos_dir}"
+        issues=$((issues + 1))
+      fi
+    fi
+  else
+    warn "Config file missing: ${CONFIG_FILE}"
+    issues=$((issues + 1))
+  fi
+
+  # Check tmux.conf
+  if [ -f "$TMUX_CONF" ]; then
+    if grep -q 'set-option.*set-titles.*off' "$TMUX_CONF" 2>/dev/null && \
+       grep -q 'set-option.*allow-rename.*off' "$TMUX_CONF" 2>/dev/null; then
+      ok "tmux.conf has required settings"
+    else
+      warn "tmux.conf missing required settings (set-titles off, allow-rename off)"
+      issues=$((issues + 1))
+    fi
+  else
+    warn "~/.tmux.conf does not exist"
+    issues=$((issues + 1))
+  fi
+
+  # Check installed scripts
+  local install_dir="$INSTALL_DIR"
+  if [ -f "$CONFIG_FILE" ]; then
+    local cfg_dir
+    cfg_dir=$(grep '^INSTALL_DIR=' "$CONFIG_FILE" 2>/dev/null | cut -d= -f2- | tr -d '"' || true)
+    [ -n "$cfg_dir" ] && install_dir="$cfg_dir"
+  fi
+
+  for script in "${SCRIPTS[@]}"; do
+    local target="${install_dir}/${script}"
+    if [ -f "$target" ] || [ -L "$target" ]; then
+      ok "${script} installed at ${target}"
+    else
+      warn "${script} not found at ${target}"
+      issues=$((issues + 1))
+    fi
+  done
+
+  # Check dependencies
+  if command -v tmux &>/dev/null; then
+    ok "tmux found: $(tmux -V)"
+  else
+    warn "tmux not found in PATH"
+    issues=$((issues + 1))
+  fi
+
+  if command -v python3 &>/dev/null; then
+    if python3 -c "import PIL" 2>/dev/null; then
+      ok "Python 3 + Pillow available (background images enabled)"
+    else
+      info "Python 3 found but Pillow not installed (background images disabled)"
+    fi
+  else
+    info "Python 3 not found (background images disabled)"
+  fi
+
+  echo ""
+  if [ "$issues" -gt 0 ]; then
+    warn "${issues} issue(s) found"
+    return 1
+  else
+    ok "All checks passed"
+    return 0
+  fi
+}
+
+# --- Parse arguments ---
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --help|-h)       usage; exit 0 ;;
+    --check|--doctor) check_health; exit $? ;;
+    --uninstall)     exec "${SCRIPT_DIR}/uninstall.sh"; ;;
+    --copy)          MODE="copy"; shift ;;
+    --link)          MODE="link"; shift ;;
+    --force|-f)      FORCE=true; shift ;;
+    -*)              die "Unknown option: $1 (try --help)" ;;
+    *)               die "Unexpected argument: $1 (try --help)" ;;
+  esac
+done
+
+# --- Preflight ---
+if [ ! -d "$BIN_DIR" ]; then
+  die "Script bin directory not found: ${BIN_DIR}"
+fi
+
+for script in "${SCRIPTS[@]}"; do
+  if [ ! -f "${BIN_DIR}/${script}" ]; then
+    die "Missing script: ${BIN_DIR}/${script}"
+  fi
+done
+
+# --- Step 1: Ask for sessions directory ---
+printf "\n${BOLD}iterm2-tmux setup${RESET}\n\n"
+
+default_repos="$HOME/Repos"
+if [ -f "$CONFIG_FILE" ]; then
+  existing=$(grep '^TMUX_REPOS_DIR=' "$CONFIG_FILE" 2>/dev/null | cut -d= -f2- | tr -d '"' || true)
+  [ -n "$existing" ] && default_repos="$existing"
+fi
+
+repos_dir=$(prompt_with_default "Directory containing subdirectories for tmux sessions" "$default_repos")
+
+# Expand ~
+repos_dir="${repos_dir/#\~/$HOME}"
+
+if [ ! -d "$repos_dir" ]; then
+  if confirm "Directory '${repos_dir}' does not exist. Create it?"; then
+    mkdir -p "$repos_dir"
+    ok "Created ${repos_dir}"
+  else
+    warn "Proceeding without creating directory — scripts will fail until it exists"
+  fi
+fi
+
+# Write config
+mkdir -p "$CONFIG_DIR"
+cat > "$CONFIG_FILE" <<EOF
+# iterm2-tmux configuration (generated by install.sh)
+TMUX_REPOS_DIR="${repos_dir}"
+INSTALL_DIR="${INSTALL_DIR}"
+EOF
+ok "Saved config to ${CONFIG_FILE}"
+
+# --- Step 2: Install tmux.conf ---
+printf "\n${BOLD}tmux configuration${RESET}\n\n"
+
+needs_set_titles=true
+needs_allow_rename=true
+
+if [ -f "$TMUX_CONF" ]; then
+  grep -q 'set-option.*set-titles.*off' "$TMUX_CONF" 2>/dev/null && needs_set_titles=false
+  grep -q 'set-option.*allow-rename.*off' "$TMUX_CONF" 2>/dev/null && needs_allow_rename=false
+fi
+
+if "$needs_set_titles" || "$needs_allow_rename"; then
+  if [ -f "$TMUX_CONF" ]; then
+    info "Appending required settings to ${TMUX_CONF}"
+    echo "" >> "$TMUX_CONF"
+    echo "# iterm2-tmux: required settings for tab title persistence" >> "$TMUX_CONF"
+    "$needs_set_titles" && echo "set-option -g set-titles off" >> "$TMUX_CONF"
+    "$needs_allow_rename" && echo "set-option -g allow-rename off" >> "$TMUX_CONF"
+  else
+    info "Creating ${TMUX_CONF} with required settings"
+    cp "$TMUX_RECOMMENDED" "$TMUX_CONF"
+  fi
+  ok "tmux configuration updated"
+else
+  ok "tmux.conf already has required settings"
+fi
+
+# --- Step 3: Install scripts ---
+printf "\n${BOLD}Installing scripts${RESET}\n\n"
+
+mkdir -p "$INSTALL_DIR"
+
+for script in "${SCRIPTS[@]}"; do
+  source_path="${BIN_DIR}/${script}"
+  target_path="${INSTALL_DIR}/${script}"
+
+  # Remove existing if present
+  if [ -f "$target_path" ] || [ -L "$target_path" ]; then
+    rm "$target_path"
+  fi
+
+  if [ "$MODE" = "link" ]; then
+    ln -s "$source_path" "$target_path"
+    ok "Linked ${script} -> ${target_path}"
+  else
+    cp "$source_path" "$target_path"
+    chmod +x "$target_path"
+    ok "Copied ${script} -> ${target_path}"
+  fi
+done
+
+# --- Step 4: Optional iTerm2 plist import ---
+printf "\n${BOLD}iTerm2 preferences${RESET}\n\n"
+
+plist_source="${SCRIPT_DIR}/iterm2/com.googlecode.iterm2.plist"
+plist_target="${HOME}/Library/Preferences/com.googlecode.iterm2.plist"
+
+if [ -f "$plist_source" ]; then
+  if confirm "Import iTerm2 preferences? (backs up existing first)"; then
+    if [ -f "$plist_target" ]; then
+      backup="${plist_target}.backup.$(date +%Y%m%d%H%M%S)"
+      cp "$plist_target" "$backup"
+      ok "Backed up existing plist to ${backup}"
+    fi
+    cp "$plist_source" "$plist_target"
+    ok "Imported iTerm2 preferences"
+    info "Restart iTerm2 for changes to take effect"
+  else
+    info "Skipped iTerm2 preferences import"
+    info "Key settings to enable manually in iTerm2 Preferences:"
+    info "  - General > tmux > Auto-hide tmux client session"
+    info "  - General > tmux > Sync clipboard"
+    info "  - General > Startup > Open no windows at startup"
+  fi
+else
+  info "iTerm2 plist not found in repo — skipping"
+fi
+
+# --- Summary ---
+printf "\n${BOLD}Setup complete${RESET}\n\n"
+
+ok "Sessions directory: ${repos_dir}"
+ok "Scripts installed to: ${INSTALL_DIR}"
+ok "Config saved to: ${CONFIG_FILE}"
+
+# Check if INSTALL_DIR is in PATH
+if ! echo "$PATH" | tr ':' '\n' | grep -qx "$INSTALL_DIR"; then
+  echo ""
+  warn "${INSTALL_DIR} is not in your PATH"
+  info "Add this to your shell profile (~/.zshrc or ~/.bashrc):"
+  echo ""
+  printf "  ${DIM}export PATH=\"%s:\$PATH\"${RESET}\n" "$INSTALL_DIR"
+  echo ""
+fi
+
+echo ""
+info "Usage:"
+printf "  ${BOLD}tmux-iterm-tabs.sh${RESET}   Open iTerm2 tabs for all tmux sessions\n"
+printf "  ${BOLD}tmux-sessions.sh${RESET}     Create tmux sessions from directories\n"
+printf "  ${BOLD}tmux-picker.sh${RESET}       Interactive session picker\n"
+echo ""

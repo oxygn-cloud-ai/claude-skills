@@ -26,6 +26,7 @@ Install a skill. Type a slash command. Get superpowers.
 | Skill | Command | Description |
 |-------|---------|-------------|
 | **chk1** | `/chk1` | Adversarial implementation audit — fault-finding, risk-exposing, deviation-detecting review of recent changes |
+| **iterm2-tmux** | (standalone) | iTerm2 + tmux tab orchestration — one colored tab per repo directory |
 
 ## Prerequisites
 
