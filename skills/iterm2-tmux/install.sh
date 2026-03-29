@@ -79,7 +79,7 @@ prompt_with_default() {
     echo "$default"
     return
   fi
-  printf "${GREEN}?${RESET} ${BOLD}%s${RESET} ${DIM}(%s)${RESET}${BOLD}:${RESET} " "$prompt" "$default"
+  printf "${GREEN}?${RESET} ${BOLD}%s${RESET} ${DIM}(%s)${RESET}${BOLD}:${RESET} " "$prompt" "$default" >&2
   local answer
   read -r answer
   echo "${answer:-$default}"
