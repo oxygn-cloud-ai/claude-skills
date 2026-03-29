@@ -1,6 +1,8 @@
 # iterm2-tmux
 
-One iTerm2 tab per tmux session, auto-bootstrapped from a directory of project folders. Each tab gets a unique color and optional watermark background image.
+**Requires macOS with [iTerm2](https://iterm2.com) installed.** This tool does not work on Linux or Windows.
+
+One iTerm2 tab per tmux session, auto-bootstrapped from a directory of project folders. Each tab gets a unique colour and optional watermark background image. Tabs open automatically when iTerm2 launches.
 
 ## How It Works
 
@@ -49,6 +51,20 @@ The installer will:
 
 INSTALL_DIR=~/bin ./install.sh    Install to ~/bin instead
 ```
+
+## Auto-Startup
+
+The installer offers to configure automatic tab creation when iTerm2 opens. When enabled, a small snippet is added to `~/.zshrc` that:
+
+1. Detects iTerm2 (does not run in VS Code terminal, SSH, or other terminals)
+2. Uses a lockfile guard to prevent duplicate tab creation
+3. Runs `tmux-iterm-tabs.sh` in the background so shell init is not blocked
+
+The installer also configures iTerm2 to open a window on launch (required for auto-start to trigger).
+
+### Disable Auto-Startup
+
+Remove the marked block from `~/.zshrc` (between `# --- iterm2-tmux auto-start` and `# --- end iterm2-tmux auto-start ---`), or run the uninstaller which removes it automatically.
 
 ## Configuration
 

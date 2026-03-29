@@ -47,6 +47,15 @@ if [ -d "$bg_dir" ]; then
   ok "Removed ${bg_dir}"
 fi
 
+# Remove auto-start snippet from .zshrc
+if [ -f "${HOME}/.zshrc" ] && grep -qF "# --- iterm2-tmux auto-start" "${HOME}/.zshrc"; then
+  sed -i '' '/# --- iterm2-tmux auto-start/,/# --- end iterm2-tmux auto-start ---/d' "${HOME}/.zshrc"
+  ok "Removed auto-startup snippet from ~/.zshrc"
+fi
+
+# Remove stale lockfile
+rm -rf /tmp/iterm2-tmux-autostart.lock 2>/dev/null || true
+
 # Remove config
 if [ -d "${HOME}/.config/iterm2-tmux" ]; then
   rm -rf "${HOME}/.config/iterm2-tmux"

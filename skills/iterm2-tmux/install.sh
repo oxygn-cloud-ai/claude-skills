@@ -159,6 +159,26 @@ check_health() {
     info "Python 3 not found (background images disabled)"
   fi
 
+  # Check auto-startup
+  if [ -f "$HOME/.zshrc" ] && grep -qF "# --- iterm2-tmux auto-start" "$HOME/.zshrc"; then
+    ok "Auto-startup configured in ~/.zshrc"
+  else
+    info "Auto-startup not configured (manual launch only)"
+  fi
+
+  # Check iTerm2 startup behaviour
+  local live_plist="$HOME/Library/Preferences/com.googlecode.iterm2.plist"
+  if [ -f "$live_plist" ]; then
+    local open_no_win
+    open_no_win=$(/usr/libexec/PlistBuddy -c "Print :OpenNoWindowsAtStartup" "$live_plist" 2>/dev/null || echo "unknown")
+    if [ "$open_no_win" = "true" ]; then
+      warn "iTerm2 opens no windows at startup — auto-start will not trigger"
+      issues=$((issues + 1))
+    elif [ "$open_no_win" = "false" ]; then
+      ok "iTerm2 opens a window at startup"
+    fi
+  fi
+
   echo ""
   if [ "$issues" -gt 0 ]; then
     warn "${issues} issue(s) found"
@@ -182,6 +202,11 @@ while [ $# -gt 0 ]; do
     *)               die "Unexpected argument: $1 (try --help)" ;;
   esac
 done
+
+# --- Platform check ---
+if [ "$(uname -s)" != "Darwin" ]; then
+  die "Requires iTerm2 on macOS!"
+fi
 
 # --- Preflight ---
 if [ ! -d "$BIN_DIR" ]; then
@@ -300,10 +325,64 @@ if [ -f "$plist_source" ]; then
     info "Key settings to enable manually in iTerm2 Preferences:"
     info "  - General > tmux > Auto-hide tmux client session"
     info "  - General > tmux > Sync clipboard"
-    info "  - General > Startup > Open no windows at startup"
   fi
 else
   info "iTerm2 plist not found in repo — skipping"
+fi
+
+# --- Step 5: Auto-startup on iTerm2 open ---
+printf "\n${BOLD}Auto-startup${RESET}\n\n"
+
+ZSHRC="${HOME}/.zshrc"
+AUTOSTART_MARKER="# --- iterm2-tmux auto-start"
+
+already_installed=false
+if [ -f "$ZSHRC" ] && grep -qF "$AUTOSTART_MARKER" "$ZSHRC"; then
+  already_installed=true
+fi
+
+if "$already_installed"; then
+  ok "Auto-startup already configured in ${ZSHRC}"
+else
+  if confirm "Auto-start tmux tabs when iTerm2 opens? (adds snippet to ~/.zshrc)"; then
+    touch "$ZSHRC"
+
+    cat >> "$ZSHRC" <<AUTOSTART_BLOCK
+
+# --- iterm2-tmux auto-start (managed by install.sh — do not edit) ---
+if [[ "\$TERM_PROGRAM" == "iTerm.app" && -z "\$TMUX" ]]; then
+  _lockdir="/tmp/iterm2-tmux-autostart.lock"
+  _ttl=30
+  if mkdir "\$_lockdir" 2>/dev/null; then
+    (
+      "${INSTALL_DIR}/tmux-iterm-tabs.sh" 2>/dev/null || true
+      rm -rf "\$_lockdir"
+    ) &
+    disown
+    ( sleep "\$_ttl" && rm -rf "\$_lockdir" ) &>/dev/null &
+    disown
+  fi
+  unset _lockdir _ttl
+fi
+# --- end iterm2-tmux auto-start ---
+AUTOSTART_BLOCK
+
+    ok "Added auto-startup snippet to ${ZSHRC}"
+
+    # Ensure iTerm2 opens a window on launch (required for auto-start)
+    live_plist="${HOME}/Library/Preferences/com.googlecode.iterm2.plist"
+    if [ -f "$live_plist" ]; then
+      open_no_win=$(/usr/libexec/PlistBuddy -c "Print :OpenNoWindowsAtStartup" "$live_plist" 2>/dev/null || echo "unknown")
+      if [ "$open_no_win" = "true" ]; then
+        /usr/libexec/PlistBuddy -c "Set :OpenNoWindowsAtStartup false" "$live_plist" 2>/dev/null
+        ok "Configured iTerm2 to open a window at startup"
+      fi
+    fi
+
+    info "tmux tabs will open automatically when iTerm2 launches"
+  else
+    info "Skipped auto-startup — run tmux-iterm-tabs.sh manually"
+  fi
 fi
 
 # --- Summary ---
