@@ -66,7 +66,7 @@ confirm() {
     warn "Non-interactive: skipping (use --force to override)"
     return 1
   fi
-  printf "\n${BOLD}>>>${RESET} %s [y/N] " "$prompt"
+  printf "${GREEN}?${RESET} ${BOLD}%s${RESET} ${DIM}(y/N)${RESET}${BOLD}:${RESET} " "$prompt"
   local answer
   read -r answer
   [[ "$answer" =~ ^[Yy]$ ]]
@@ -79,7 +79,7 @@ prompt_with_default() {
     echo "$default"
     return
   fi
-  printf "\n${BOLD}>>>${RESET} %s [${DIM}%s${RESET}]: " "$prompt" "$default"
+  printf "${GREEN}?${RESET} ${BOLD}%s${RESET} ${DIM}(%s)${RESET}${BOLD}:${RESET} " "$prompt" "$default"
   local answer
   read -r answer
   echo "${answer:-$default}"
@@ -195,7 +195,8 @@ for script in "${SCRIPTS[@]}"; do
 done
 
 # --- Step 1: Ask for sessions directory ---
-printf "\n${BOLD}iterm2-tmux setup${RESET}\n\n"
+printf "\n${BOLD}iterm2-tmux setup${RESET}\n"
+printf "${DIM}Answer each question below. Press Enter to accept the default shown in brackets.${RESET}\n\n"
 
 default_repos="$HOME/Repos"
 if [ -f "$CONFIG_FILE" ]; then
