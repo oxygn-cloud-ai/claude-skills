@@ -34,6 +34,33 @@ echo | openssl s_client -connect myzr.io:443 -servername myzr.io -status 2>/dev/
 | T7 | Certificate valid | notAfter date is in the future |
 | T8 | Certificate covers domain | SAN includes `myzr.io` and `*.myzr.io` |
 | T9 | OCSP stapling | OCSP response present (WARN if not) |
+| TD1 | SSL renegotiation DoS | Client-initiated TLS renegotiation must fail; secure renegotiation supported |
+| TD2 | Client certificate handling | Self-signed client cert does not grant different access than no cert |
+| TD3 | HTTP/3 (QUIC) support | Alt-Svc header properly configured if HTTP/3 advertised; security headers match HTTP/2 |
+
+### TD1-TD3 Additional Tests
+
+```bash
+# TD1 — SSL renegotiation
+echo "R" | openssl s_client -connect myzr.io:443 -servername myzr.io 2>&1 | grep -i "renegotiat"
+echo | openssl s_client -connect myzr.io:443 -servername myzr.io 2>&1 | grep -i "secure renegotiation"
+# PASS if "Secure Renegotiation IS supported" and client-initiated renegotiation fails
+
+# TD2 — Client certificate
+openssl req -x509 -newkey rsa:2048 -keyout /tmp/client.key -out /tmp/client.crt \
+  -days 1 -nodes -subj "/CN=admin/O=Evil Corp" 2>/dev/null
+WITH_CERT=$(curl -s -o /dev/null -w "%{http_code}" "https://myzr.io/" \
+  --cert /tmp/client.crt --key /tmp/client.key -H "User-Agent: Mozilla/5.0" --max-time 10)
+WITHOUT_CERT=$(curl -s -o /dev/null -w "%{http_code}" "https://myzr.io/" \
+  -H "User-Agent: Mozilla/5.0" --max-time 10)
+echo "With cert: $WITH_CERT, Without: $WITHOUT_CERT"
+rm -f /tmp/client.key /tmp/client.crt
+# PASS if both return same status
+
+# TD3 — HTTP/3
+curl -sI "https://myzr.io/" -H "User-Agent: Mozilla/5.0" | grep -i "alt-svc"
+# PASS if Alt-Svc properly configured or not advertised
+```
 
 ## Output
 

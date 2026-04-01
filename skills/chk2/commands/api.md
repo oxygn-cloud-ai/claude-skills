@@ -70,6 +70,36 @@ All requests use: `curl -s "https://myzr.io/api" -X POST -H "Content-Type: appli
 | A10 | Session traversal rejected | Returns `{"error":"Session not found"}`, no file content |
 | A11 | Word XSS payload accepted safely | Returns `{"ok":true}` or error — no reflected content |
 | A12 | No stack traces in errors | No error responses contain file paths, line numbers, or `at Object.` |
+| A13 | HTTP parameter pollution | Duplicate JSON keys `{"action":"health","action":"admin"}` handled safely — last wins or error |
+| A14 | Unicode normalization attack | Cyrillic homoglyphs in action names rejected (e.g., Cyrillic `а` for Latin `a`) |
+| A15 | JSON key bombing | Extremely long key name (1000+ chars) rejected with 400/413 |
+| A16 | Null byte injection | Null bytes in fields `{"action":"health\u0000admin"}` rejected |
+| A17 | Response Content-Type correct | All API responses return `Content-Type: application/json`, never `text/html` |
+
+### A13-A17 Additional Tests
+
+```bash
+# A13 — HTTP parameter pollution
+curl -s "https://myzr.io/api" -X POST -H "Content-Type: application/json" \
+  -d '{"action":"health","action":"admin"}' -H "User-Agent: Mozilla/5.0"
+
+# A14 — Unicode normalization (Cyrillic 'а' U+0430 for Latin 'a')
+curl -s "https://myzr.io/api" -X POST -H "Content-Type: application/json" \
+  -d '{"action":"heаlth"}' -H "User-Agent: Mozilla/5.0"
+
+# A15 — JSON key bombing
+python3 -c "import json; print(json.dumps({'a'*1000: 'v', 'action': 'health'}))" | \
+  curl -s "https://myzr.io/api" -X POST -H "Content-Type: application/json" \
+  -H "User-Agent: Mozilla/5.0" -d @-
+
+# A16 — Null byte injection
+curl -s "https://myzr.io/api" -X POST -H "Content-Type: application/json" \
+  -d '{"action":"health\u0000admin"}' -H "User-Agent: Mozilla/5.0"
+
+# A17 — Response Content-Type
+curl -sI "https://myzr.io/api" -X POST -H "Content-Type: application/json" \
+  -d '{"action":"health"}' -H "User-Agent: Mozilla/5.0" | grep -i "^content-type:"
+```
 
 ## Output
 

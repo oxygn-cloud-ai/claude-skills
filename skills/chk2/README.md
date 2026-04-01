@@ -1,6 +1,6 @@
 # chk2 — Adversarial Security Audit
 
-A Claude Code skill that runs comprehensive security audits against web services. Tests across 11 categories with ~100 individual checks, outputs a scored report, and offers guided remediation.
+A Claude Code skill that runs comprehensive security audits against web services. Tests across 30 categories with ~209 individual checks, outputs a scored report, and offers guided remediation.
 
 ## Prerequisites
 

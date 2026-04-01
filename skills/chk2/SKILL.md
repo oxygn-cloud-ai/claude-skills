@@ -1,11 +1,11 @@
 ---
 name: chk2
-version: 1.0.0
-description: Adversarial security audit for web services. Tests headers, TLS, DNS, CORS, API injection, WebSocket, WAF, infrastructure, brute force, scaling, and information disclosure. Outputs SECURITY_CHECK.md.
+version: 2.0.0
+description: Adversarial security audit for web services. 209 checks across 30 categories. Outputs SECURITY_CHECK.md.
 user-invocable: true
 disable-model-invocation: true
 allowed-tools: Read, Grep, Glob, Bash(*), Write, Agent, AskUserQuestion
-argument-hint: [all | quick | headers | tls | dns | cors | api | ws | waf | infra | brute | scale | disclosure | fix | help | doctor | version]
+argument-hint: [all | quick | headers | tls | dns | cors | api | ws | waf | infra | brute | scale | disclosure | cookies | cache | smuggling | auth | transport | redirect | fingerprint | timing | compression | jwt | graphql | sse | ipv6 | reporting | hardening | negotiation | proxy | business | backend | fix | update | help | doctor | version]
 ---
 
 # chk2 — Adversarial Security Audit
@@ -19,30 +19,52 @@ Check $ARGUMENTS before proceeding. If it matches one of the following subcomman
 If $ARGUMENTS equals "help", "--help", or "-h", display the following usage guide and stop.
 
 ```
-chk2 v1.0.0 — Adversarial Security Audit
+chk2 v2.0.0 — Adversarial Security Audit
 
 USAGE
-  /chk2                Run all test categories (~100 checks)
+  /chk2                Run all test categories (~209 checks)
   /chk2 all            Same as above
   /chk2 quick          Fast passive-only subset (headers+tls+dns+cors)
   /chk2 <category>     Run a specific test category
   /chk2 fix            Deep resolution helper for failed checks
+  /chk2 update         Update chk2 to the latest version
   /chk2 help           Display this usage guide
   /chk2 doctor         Check environment health
   /chk2 version        Show installed version
 
-CATEGORIES
+CATEGORIES — Core (109 checks)
   headers      HTTP security headers (14 checks)
-  tls          TLS/SSL versions, ciphers, certs (9 checks)
-  dns          DNS, DNSSEC, SPF, DMARC (10 checks)
+  tls          TLS/SSL, ciphers, certs, renegotiation, H3 (12 checks)
+  dns          DNS, DNSSEC, SPF, DMARC, subdomain takeover (15 checks)
   cors         CORS policy, WebSocket origin (8 checks)
-  api          Injection, fuzzing, type confusion (12 checks)
-  ws           WebSocket security deep dive (10 checks)
-  waf          WAF rules, rate limiting (10 checks)
+  api          Injection, fuzzing, type confusion, param pollution (17 checks)
+  ws           WebSocket security, subprotocol, cross-protocol (13 checks)
+  waf          WAF rules, rate limiting, SSRF, bot mgmt (12 checks)
   infra        Cloudflare config, paths, error pages (12 checks)
   brute        Session enumeration, entropy (8 checks)
-  scale        Connection limits, payload sizes (6 checks)
+  scale        Connection limits, payload sizes, Slowloris, ReDoS (10 checks)
   disclosure   Information leakage, error handling (10 checks)
+
+CATEGORIES — Extended (100 checks)
+  cookies      Cookie security: HttpOnly, Secure, SameSite (5 checks)
+  cache        Cache security and deception (5 checks)
+  smuggling    HTTP request smuggling (4 checks)
+  auth         Session fixation, IDOR, privilege escalation (7 checks)
+  transport    HTTP/2, ALPN, Content-Type enforcement (5 checks)
+  redirect     Open redirect and redirect chains (4 checks)
+  fingerprint  COOP, COEP, CORP, CT, HSTS preload (6 checks)
+  timing       Timing attacks and race conditions (4 checks)
+  compression  BREACH, CRIME, decompression bombs (3 checks)
+  jwt          JWT alg:none, confusion, expiration, kid (4 checks)
+  graphql      Introspection, depth, batching, suggestions (4 checks)
+  sse          SSE auth, connection limits, cross-origin (3 checks)
+  ipv6         IPv6 policy consistency and WAF bypass (3 checks)
+  reporting    Report-To, NEL, security.txt compliance (4 checks)
+  hardening    ETag inode, ranges, header size, CRLF (5 checks)
+  negotiation  Content-Type mismatch, polyglot, error types (3 checks)
+  proxy        Preflight cache, CDN bypass, mesh leak (4 checks)
+  business     Replay, cross-session, rate limit bypass (4 checks)
+  backend      Error fingerprinting, favicon, timing (3 checks)
 
 OUTPUT
   Results written to SECURITY_CHECK.md in the current repo root.
@@ -82,8 +104,8 @@ chk2 doctor — Environment Health Check
   [PASS] python3: /usr/bin/python3
   [PASS] websockets: installed
   [PASS] target reachable: https://myzr.io/ (200)
-  [PASS] sub-commands: 14 files in ~/.claude/commands/chk2/
-  [PASS] version: 1.0.0
+  [PASS] sub-commands: 33 files in ~/.claude/commands/chk2/
+  [PASS] version: 2.0.0
 
   Result: N passed, N warnings, N failed
 ```
@@ -95,7 +117,7 @@ End of doctor output. Do not continue.
 If $ARGUMENTS equals "version", "--version", or "-v", output the version and stop.
 
 ```
-chk2 v1.0.0
+chk2 v2.0.0
 ```
 
 End of version output. Do not continue.
@@ -138,6 +160,25 @@ Parse $ARGUMENTS and route:
 | `brute` | Run Brute Force category |
 | `scale` | Run Scaling category |
 | `disclosure` | Run Disclosure category |
+| `cookies` | Run Cookies category |
+| `cache` | Run Cache category |
+| `smuggling` | Run Smuggling category |
+| `auth` | Run Auth category |
+| `transport` | Run Transport category |
+| `redirect` | Run Redirect category |
+| `fingerprint` | Run Fingerprint category |
+| `hardening` | Run Hardening category |
+| `negotiation` | Run Negotiation category |
+| `proxy` | Run Proxy category |
+| `business` | Run Business Logic category |
+| `backend` | Run Backend category |
+| `timing` | Run Timing category |
+| `compression` | Run Compression category |
+| `jwt` | Run JWT/Token Security category |
+| `graphql` | Run GraphQL category |
+| `sse` | Run SSE Security category |
+| `ipv6` | Run IPv6 Security category |
+| `reporting` | Run Reporting & Compliance category |
 | `fix` | Run Fix helper (reads existing SECURITY_CHECK.md) |
 
 If the sub-command `.md` files exist in `~/.claude/commands/chk2/`, invoke them via the Skill tool. Otherwise, execute the tests inline using the definitions below.
@@ -240,5 +281,94 @@ Test large payloads, deep nesting, concurrent sessions, WS connection limits, WS
 ### Disclosure (10 checks)
 Test error page content, stack traces, health endpoint info, game data authentication, version headers, method handling.
 
+### Cookies (5 checks)
+Test cookie security flags: HttpOnly, Secure, SameSite attributes, sensitive data in cookie values, Domain scope.
+
+### Cache (5 checks)
+Test cache security: Cache-Control on API, authenticated content caching, web cache deception, CDN cache-key correctness, Pragma header.
+
+### Smuggling (4 checks)
+Test HTTP request smuggling defenses: CL.TE desync, TE.CL desync, duplicate Content-Length, HTTP/2 downgrade safety.
+
+### Auth (7 checks)
+Test authentication and session security: session fixation, invalidation, concurrent limits, timeout, IDOR, mass assignment, privilege escalation.
+
+### Transport (5 checks)
+Test transport layer: HTTP/2 support, ALPN negotiation, HTTP/1.0 handling, Content-Type enforcement, Content-Length validation.
+
+### Redirect (4 checks)
+Test redirect security: open redirect via query params, Host header redirect, X-Forwarded-Host redirect, redirect chain cleanliness.
+
+### Fingerprint (6 checks)
+Test fingerprinting-resistance headers: Permissions-Policy, COOP, COEP, CORP, Certificate Transparency SCT, HSTS preload status.
+
+### Hardening (5 checks)
+Test server hardening: ETag inode leak, Accept-Ranges abuse, request header size limits, HTTP trailer injection, CRLF response header injection.
+
+### Negotiation (3 checks)
+Test content negotiation security: Content-Type mismatch on API, polyglot file upload, error response Content-Type consistency.
+
+### Proxy (4 checks)
+Test proxy/CDN behavior: CORS preflight cache poisoning, CDN cache key normalization, service mesh header leaks, load balancer fingerprinting.
+
+### Business Logic (4 checks)
+Test business logic: replay attacks, cross-session state leakage, concurrent rate limit bypass, predictable resource IDs.
+
+### Backend (3 checks)
+Test backend fingerprinting: error behavior patterns, default favicon hash, timing-based detection.
+
+### Timing (4 checks)
+Test timing security: constant-time session lookup, timing leak on pair codes, race conditions on game actions, idempotency on creation.
+
+### Compression (3 checks)
+Test compression attacks: BREACH via HTTP compression on authenticated responses, CRIME via TLS-level compression, decompression bomb resistance.
+
+### JWT (4 checks)
+Test JWT/token security: alg:none bypass, RS256-to-HS256 confusion, expiration enforcement, kid header injection.
+
+### GraphQL (4 checks)
+Test GraphQL security: introspection disabled, query depth limiting, batch query abuse, field suggestion information leak.
+
+### SSE (3 checks)
+Test Server-Sent Events security: authentication required, connection limits, cross-origin access control.
+
+### IPv6 (3 checks)
+Test IPv6 security: policy consistency with IPv4, WAF bypass prevention, IPv6 address disclosure in headers.
+
+### Reporting (4 checks)
+Test security reporting: Report-To/Reporting-Endpoints header, NEL header, security.txt PGP signature, security.txt Expires validity.
+
 ### Fix
 Read existing SECURITY_CHECK.md. For every FAIL and WARN, provide deep resolution: exact Cloudflare dashboard paths, copy-pasteable server code, DNS records, and verification commands. Group by effort level (instant / quick / deeper).
+
+---
+
+## Update Subcommand
+
+If $ARGUMENTS equals "update", "--update", or "upgrade":
+
+1. Read the current version from the installed SKILL.md
+2. Attempt to download the latest version:
+   ```bash
+   REPO="https://raw.githubusercontent.com/oxygn-cloud-ai/claude-skills/main"
+   REMOTE_VER=$(curl -s "$REPO/skills/chk2/SKILL.md" | grep -m1 '^version:' | sed 's/^version: *//')
+   ```
+3. If the remote version matches the installed version:
+   ```
+   chk2 update — already at v2.0.0 (latest)
+   ```
+4. If a newer version is available, download all files:
+   ```bash
+   curl -sL "$REPO/skills/chk2/SKILL.md" -o ~/.claude/skills/chk2/SKILL.md
+   mkdir -p ~/.claude/commands/chk2
+   for f in all quick headers tls dns cors api ws waf infra brute scale disclosure fix cookies cache smuggling auth transport redirect fingerprint timing compression jwt graphql sse ipv6 reporting hardening negotiation proxy business backend; do
+     curl -sL "$REPO/skills/chk2/commands/${f}.md" -o ~/.claude/commands/chk2/${f}.md
+   done
+   ```
+5. Report the update:
+   ```
+   chk2 update — Updated from vX.Y.Z to vA.B.C (33 sub-commands installed)
+   Restart Claude Code to pick up changes.
+   ```
+
+End of update output. Do not continue.

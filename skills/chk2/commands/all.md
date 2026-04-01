@@ -25,6 +25,25 @@ Run every test category against https://myzr.io sequentially. Write results to `
    - `/chk2:brute`
    - `/chk2:scale`
    - `/chk2:disclosure`
+   - `/chk2:cookies`
+   - `/chk2:cache`
+   - `/chk2:smuggling`
+   - `/chk2:auth`
+   - `/chk2:transport`
+   - `/chk2:redirect`
+   - `/chk2:fingerprint`
+   - `/chk2:timing`
+   - `/chk2:compression`
+   - `/chk2:jwt`
+   - `/chk2:graphql`
+   - `/chk2:sse`
+   - `/chk2:ipv6`
+   - `/chk2:reporting`
+   - `/chk2:hardening`
+   - `/chk2:negotiation`
+   - `/chk2:proxy`
+   - `/chk2:business`
+   - `/chk2:backend`
 
    If you hit a rate limit (429 or 1015), wait 65 seconds before continuing.
 

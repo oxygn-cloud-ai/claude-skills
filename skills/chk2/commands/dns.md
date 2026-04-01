@@ -30,6 +30,49 @@ dig myzr.io CAA +short
 | D8 | DMARC strict alignment | `adkim=s` and `aspf=s` present |
 | D9 | No unexpected MX | No MX records (domain doesn't receive email) or MX is expected |
 | D10 | CAA record | CAA record present restricting CA issuance (WARN if absent) |
+| D11 | Subdomain takeover risk | CNAME records for common subdomains (www, api, mail, staging, dev, cdn) resolve to active services |
+| D12 | DNS rebinding resistance | TTL on A records is >= 60 seconds (WARN if < 30s) |
+| D13 | MTA-STS policy | `_mta-sts.myzr.io` TXT record present (WARN if absent) |
+| DA1 | DoH resolver exposure | No internal DNS resolver exposed at /dns-query or common DoH paths |
+| DA2 | Dangling CNAME detection | No CNAME records pointing to unregistered or expired domains |
+
+### D11-D13, DA1-DA2 Additional Tests
+
+```bash
+# D11 — Subdomain takeover risk
+for sub in www api mail staging dev cdn app beta; do
+  cname=$(dig +short CNAME ${sub}.myzr.io)
+  if [ -n "$cname" ]; then
+    resolved=$(dig +short A "$cname")
+    if [ -z "$resolved" ]; then
+      echo "RISK: ${sub}.myzr.io -> $cname (UNRESOLVED)"
+    else
+      echo "OK: ${sub}.myzr.io -> $cname -> $resolved"
+    fi
+  fi
+done
+
+# D12 — DNS rebinding resistance
+dig myzr.io A | grep -E "^myzr" | awk '{print "TTL:", $2}'
+
+# D13 — MTA-STS
+dig _mta-sts.myzr.io TXT +short
+
+# DA1 — DoH resolver
+for path in /dns-query /resolve /doh /query; do
+  curl -s -o /dev/null -w "%{http_code}" "https://myzr.io${path}?name=example.com&type=A" \
+    -H "Accept: application/dns-json" -H "User-Agent: Mozilla/5.0"
+done
+
+# DA2 — Dangling CNAME
+for sub in www api mail staging dev cdn; do
+  cname=$(dig +short CNAME ${sub}.myzr.io)
+  if [ -n "$cname" ]; then
+    whois_result=$(dig +short A "$cname" 2>/dev/null)
+    [ -z "$whois_result" ] && echo "DANGLING: ${sub}.myzr.io -> $cname"
+  fi
+done
+```
 
 ## Output
 

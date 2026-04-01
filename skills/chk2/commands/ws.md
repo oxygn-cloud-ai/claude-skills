@@ -47,6 +47,40 @@ async def test():
 | W8 | Oversized message | 10KB message doesn't crash server (WARN if accepted without limit) |
 | W9 | Empty message | Doesn't crash server |
 | W10 | Bogus session rejected | WS upgrade to `/ws/fakesession` returns 404 |
+| WD1 | Subprotocol abuse | Unknown subprotocols (mqtt, soap, admin, debug) are rejected on WS upgrade |
+| WD2 | Post-revocation connection reuse | WS connection is terminated or re-validated after session invalidation |
+| WD3 | Cross-protocol/h2c upgrade | h2c cleartext HTTP/2 upgrade via `Upgrade: h2c` header is rejected (not 101) |
+
+### WD1-WD3 Additional Tests
+
+```python
+# WD1 — Subprotocol abuse
+import asyncio, websockets
+async def test_subprotocols():
+    for proto in ['mqtt', 'soap', 'xmpp', 'binary', 'admin', 'debug']:
+        try:
+            ws = await websockets.connect(
+                f'wss://myzr.io/ws/{sid}',
+                subprotocols=[proto],
+                extra_headers={'User-Agent': 'Mozilla/5.0'},
+                open_timeout=5
+            )
+            print(f'{proto}: ACCEPTED (subprotocol={ws.subprotocol})')
+            await ws.close()
+        except Exception as e:
+            print(f'{proto}: REJECTED ({type(e).__name__})')
+asyncio.run(test_subprotocols())
+```
+
+```bash
+# WD3 — h2c cleartext upgrade
+curl -s -o /dev/null -w "%{http_code}" "https://myzr.io/" \
+  -H "Upgrade: h2c" \
+  -H "Connection: Upgrade, HTTP2-Settings" \
+  -H "HTTP2-Settings: AAMAAABkAAQCAAAAAAIAAAAA" \
+  -H "User-Agent: Mozilla/5.0" --max-time 5
+# PASS if NOT 101. FAIL if 101 (h2c upgrade accepted).
+```
 
 ## Output
 

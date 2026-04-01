@@ -41,6 +41,28 @@ done
 | F8 | PUT method rejected | Returns 404 or 405 |
 | F9 | DELETE method rejected | Returns 404 or 405 |
 | F10 | TRACE method disabled | Returns 404 or 405 (FAIL if 200) |
+| F11 | SSRF probe resistance | Internal/metadata URLs in API fields do not trigger server-side requests |
+| F12 | Bot management beyond UA | Requests without typical browser headers (no Accept, no Accept-Language) are flagged |
+
+### F11-F12 Additional Tests
+
+```bash
+# F11 — SSRF probes
+for url in "http://169.254.169.254/latest/meta-data/" "http://127.0.0.1:8080/" "http://localhost/" "http://[::1]/" "http://0.0.0.0/"; do
+  curl -s "https://myzr.io/api" -X POST -H "Content-Type: application/json" \
+    -d "{\"action\":\"health\",\"callback\":\"${url}\"}" -H "User-Agent: Mozilla/5.0" --max-time 5
+done
+
+# F12 — Bot management beyond UA
+# Request with no browser-like headers
+curl -s -o /dev/null -w "%{http_code}" "https://myzr.io/" --max-time 10
+# Compare with browser-like request
+curl -s -o /dev/null -w "%{http_code}" "https://myzr.io/" \
+  -H "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)" \
+  -H "Accept: text/html,application/xhtml+xml" \
+  -H "Accept-Language: en-US,en;q=0.9" \
+  -H "Accept-Encoding: gzip, deflate, br" --max-time 10
+```
 
 ## Output
 

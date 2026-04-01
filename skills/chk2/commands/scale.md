@@ -47,6 +47,64 @@ WebSocket tests (python3):
 | S4 | WS connection limit | Server caps at <=5 per session (WARN if >5) |
 | S5 | WS rapid messages | 50 messages don't crash (WARN if no rate limiting) |
 | S6 | WS 10KB message | Handled gracefully (WARN if silently accepted) |
+| RE1 | Slowloris resistance | Partial HTTP requests with slow headers are terminated within timeout |
+| RE2 | Hash collision DoS | JSON with 10,000 keys is rejected or processed in < 1 second |
+| RE3 | ReDoS via input fields | Crafted backtracking inputs (50+ repeated chars) don't cause slow responses |
+| RE4 | Chunked transfer abuse | Extremely slow chunked transfer (1 byte per second) is terminated |
+
+### RE1-RE4 Additional Tests
+
+```python
+# RE1 — Slowloris
+import socket, ssl, time
+context = ssl.create_default_context()
+results = []
+for i in range(5):
+    try:
+        s = socket.create_connection(('myzr.io', 443), timeout=10)
+        ss = context.wrap_socket(s, server_hostname='myzr.io')
+        ss.send(b'GET / HTTP/1.1\r\nHost: myzr.io\r\nUser-Agent: Mozilla/5.0\r\n')
+        time.sleep(3)
+        ss.send(b'X-Test: partial\r\n')
+        time.sleep(3)
+        ss.send(b'X-Test2: still-open\r\n')
+        results.append(f'{i}: still open after 6s')
+        ss.close()
+    except Exception as e:
+        results.append(f'{i}: closed ({type(e).__name__})')
+for r in results: print(r)
+```
+
+```bash
+# RE2 — HashDoS
+python3 -c "
+import json
+payload = {f'k{i}': 'v' for i in range(10000)}
+payload['action'] = 'health'
+print(json.dumps(payload))
+" | curl -s -o /dev/null -w "%{http_code} %{time_total}s" "https://myzr.io/api" \
+  -X POST -H "Content-Type: application/json" -H "User-Agent: Mozilla/5.0" -d @- --max-time 15
+
+# RE3 — ReDoS
+REDOS_PAYLOAD=$(python3 -c "print('a' * 50 + '!')")
+curl -s -o /dev/null -w "%{http_code} %{time_total}s" "https://myzr.io/api" \
+  -X POST -H "Content-Type: application/json" -H "User-Agent: Mozilla/5.0" \
+  -d "{\"action\":\"word\",\"sessionId\":\"test\",\"word\":\"${REDOS_PAYLOAD}\"}" --max-time 10
+
+# RE4 — Chunked transfer abuse
+python3 -c "
+import socket, ssl, time
+ctx = ssl.create_default_context()
+s = ctx.wrap_socket(socket.create_connection(('myzr.io', 443)), server_hostname='myzr.io')
+s.send(b'POST /api HTTP/1.1\r\nHost: myzr.io\r\nTransfer-Encoding: chunked\r\nContent-Type: application/json\r\n\r\n')
+for i in range(10):
+    s.send(b'1\r\na\r\n')
+    time.sleep(1)
+s.send(b'0\r\n\r\n')
+print(s.recv(4096).decode()[:200])
+s.close()
+"
+```
 
 ## Output
 

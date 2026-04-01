@@ -50,7 +50,7 @@ ${BOLD}USAGE${RESET}
 
 ${BOLD}INSTALLS TO${RESET}
   ~/.claude/skills/chk2/SKILL.md        Main skill file
-  ~/.claude/commands/chk2/*.md           Sub-command files (14 files)
+  ~/.claude/commands/chk2/*.md           Sub-command files (33 files)
 EOF
   exit 0
 fi
@@ -108,10 +108,10 @@ if [ "${1:-}" = "--check" ]; then
 
   if [ -d "$COMMANDS_TARGET" ]; then
     count=$(find "$COMMANDS_TARGET" -name "*.md" | wc -l | tr -d ' ')
-    if [ "$count" -ge 14 ]; then
+    if [ "$count" -ge 33 ]; then
       ok "Sub-commands: ${count} files in ${COMMANDS_TARGET}"
     else
-      warn "Sub-commands: only ${count}/14 files in ${COMMANDS_TARGET}"
+      warn "Sub-commands: only ${count}/33 files in ${COMMANDS_TARGET}"
       issues=$((issues + 1))
     fi
   else
