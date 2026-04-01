@@ -1,0 +1,47 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/),
+and this project adheres to [Semantic Versioning](https://semver.org/).
+
+## [Unreleased]
+
+## [1.2.0] - 2026-04-01
+
+### Added
+- **chk2 skill** — Deep repository safety audit with 63+ checks across 8 phases: metadata & trust, supply chain, malicious code, unicode integrity, AI prompt injection, CI/CD security, code quality, and git history analysis
+- **CI/CD pipeline** — GitHub Actions for ShellCheck, skill validation, installer smoke tests, and file permission checks
+- **Release workflow** — Automated GitHub Releases with checksums on version tags
+- **Skill validation script** (`scripts/validate-skills.sh`) — Automated SKILL.md frontmatter and structure validation
+- **Checksum generation** (`scripts/generate-checksums.sh`) — SHA256 integrity verification for all SKILL.md files
+- `CHECKSUMS.sha256` — Published checksums for installed skill verification
+- `SECURITY.md` — Security policy, trust model, vulnerability reporting, and contributor checklist
+- `CONTRIBUTING.md` — Contribution guide with skill requirements, PR process, and security review checklist
+- `.shellcheckrc` — ShellCheck configuration for consistent linting
+
+### Changed
+- **install.sh** — Added `--dry-run` mode, SHA256 integrity verification, bash version check, `--changelog` command, and upgrade reporting during `--update`
+- **README.md** — Added chk2 to skills table, manual install examples, and project structure
+
+### Fixed
+- **install.sh** — Fixed `local` keyword used outside function scope in `--uninstall --all` block
+- **install.sh** — Removed accidental blank line at line 181
+
+## [1.1.0] - 2026-03-31
+
+### Added
+- **chk1 skill** v1.1.0 — Adversarial implementation audit with 8 audit sections, auto-scope detection, structured output format
+- Root installer with skill discovery, version checking, health verification
+- Per-skill installer pattern (delegates to root, standalone fallback)
+- Skill template (`_template/`) with SKILL.md and README.md skeletons
+- Codebase architecture documentation (`.planning/codebase/`)
+
+### Changed
+- Installer hardened with path traversal prevention, copy verification, and non-interactive mode support
+
+## [1.0.0] - 2026-03-30
+
+### Added
+- **iterm2-tmux tool** — iTerm2 + tmux tab orchestration with colored tabs, session management, and background watermarks
+- Initial project structure with README, LICENSE (MIT), and .gitignore

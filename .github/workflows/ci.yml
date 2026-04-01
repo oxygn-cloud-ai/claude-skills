@@ -1,0 +1,115 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  shellcheck:
+    name: ShellCheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run ShellCheck
+        uses: ludeeus/action-shellcheck@2.0.0
+        with:
+          scandir: .
+          severity: warning
+
+  validate-skills:
+    name: Validate Skills
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Make scripts executable
+        run: chmod +x scripts/*.sh
+      - name: Validate all skill definitions
+        run: ./scripts/validate-skills.sh
+
+  installer-smoke-test:
+    name: Installer Smoke Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: List available skills
+        run: ./install.sh --list
+      - name: Install all skills
+        run: ./install.sh --force
+      - name: Health check
+        run: ./install.sh --check
+      - name: Verify installed files
+        run: |
+          for dir in skills/*/; do
+            name="$(basename "$dir")"
+            [[ "$name" == _* ]] && continue
+            [ -f "${dir}/SKILL.md" ] || continue
+            if [ ! -f "${HOME}/.claude/skills/${name}/SKILL.md" ]; then
+              echo "FAIL: ${name} not installed"
+              exit 1
+            fi
+            echo "OK: ${name} installed"
+          done
+      - name: Uninstall all skills
+        run: ./install.sh --uninstall --all --force
+
+  verify-checksums:
+    name: Verify Checksums
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Make scripts executable
+        run: chmod +x scripts/*.sh
+      - name: Regenerate checksums
+        run: ./scripts/generate-checksums.sh
+      - name: Verify checksums match committed file
+        run: |
+          if [ -f CHECKSUMS.sha256 ]; then
+            if ! git diff --quiet CHECKSUMS.sha256; then
+              echo "FAIL: CHECKSUMS.sha256 is out of date"
+              echo "Run: ./scripts/generate-checksums.sh"
+              git diff CHECKSUMS.sha256
+              exit 1
+            fi
+            echo "OK: Checksums match"
+          else
+            echo "WARN: No CHECKSUMS.sha256 committed yet"
+          fi
+
+  file-permissions:
+    name: File Permissions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check install.sh files are executable
+        run: |
+          failed=0
+          # Root installer
+          if [ ! -x install.sh ]; then
+            echo "FAIL: install.sh is not executable"
+            failed=1
+          fi
+          # Per-skill installers
+          for f in skills/*/install.sh; do
+            [ -f "$f" ] || continue
+            if [ ! -x "$f" ]; then
+              echo "FAIL: ${f} is not executable"
+              failed=1
+            fi
+          done
+          # Scripts
+          for f in scripts/*.sh; do
+            [ -f "$f" ] || continue
+            if [ ! -x "$f" ]; then
+              echo "FAIL: ${f} is not executable"
+              failed=1
+            fi
+          done
+          if [ "$failed" -eq 1 ]; then
+            exit 1
+          fi
+          echo "OK: All .sh files are executable"

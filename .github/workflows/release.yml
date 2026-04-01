@@ -1,0 +1,55 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate skills
+        run: |
+          chmod +x scripts/*.sh
+          ./scripts/validate-skills.sh
+
+      - name: Install all skills
+        run: ./install.sh --force
+
+      - name: Health check
+        run: ./install.sh --check
+
+      - name: Generate checksums
+        run: |
+          chmod +x scripts/generate-checksums.sh
+          ./scripts/generate-checksums.sh
+
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Extract changelog for this version
+        id: changelog
+        run: |
+          # Extract the section for the current version from CHANGELOG.md
+          version="${{ steps.version.outputs.version }}"
+          changelog=$(sed -n "/^## \[${version}\]/,/^## \[/p" CHANGELOG.md | head -n -1)
+          if [ -z "$changelog" ]; then
+            changelog="Release ${GITHUB_REF_NAME}"
+          fi
+          # Write to file for the release body
+          echo "$changelog" > /tmp/release-notes.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: /tmp/release-notes.md
+          files: CHECKSUMS.sha256
+          generate_release_notes: false

@@ -32,6 +32,7 @@ Slash-command skills installed via the root `./install.sh` into `~/.claude/skill
 | Skill | Command | Description |
 |-------|---------|-------------|
 | **chk1** | `/chk1` | Adversarial implementation audit — fault-finding, risk-exposing, deviation-detecting review of recent changes |
+| **chk2** | `/chk2` | Deep repository safety audit — 63+ checks for supply chain attacks, malicious code, prompt injection, and trojan source |
 
 ### Standalone Tools
 
@@ -69,9 +70,15 @@ cd claude-skills
 ### Manual (no clone needed)
 
 ```bash
+# chk1 — implementation audit
 mkdir -p ~/.claude/skills/chk1
 curl -sL https://raw.githubusercontent.com/oxygn-cloud-ai/claude-skills/main/skills/chk1/SKILL.md \
   -o ~/.claude/skills/chk1/SKILL.md
+
+# chk2 — repository safety audit
+mkdir -p ~/.claude/skills/chk2
+curl -sL https://raw.githubusercontent.com/oxygn-cloud-ai/claude-skills/main/skills/chk2/SKILL.md \
+  -o ~/.claude/skills/chk2/SKILL.md
 ```
 
 ### Verify installation
@@ -185,7 +192,11 @@ claude-skills/
     SKILL.md
     README.md
   skills/              <- All skills and tools live here
-    chk1/              <- Claude Code skill (has SKILL.md)
+    chk1/              <- Adversarial implementation audit
+      SKILL.md
+      README.md
+      install.sh
+    chk2/              <- Deep repository safety audit
       SKILL.md
       README.md
       install.sh

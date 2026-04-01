@@ -1,7 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-VERSION="1.1.0"
+VERSION="1.2.0"
+
+# --- Bash version check ---
+if [ "${BASH_VERSINFO[0]}" -lt 3 ] 2>/dev/null; then
+  printf "Error: bash 3.2+ required (found %s). Upgrade bash and try again.\n" "$BASH_VERSION" >&2
+  exit 1
+fi
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SKILLS_DIR="${REPO_DIR}/skills"
@@ -24,6 +30,7 @@ die()   { err "$@"; exit 1; }
 
 # --- Flags ---
 FORCE=false
+DRY_RUN=false
 INTERACTIVE=true
 [ -t 0 ] || INTERACTIVE=false  # piped/non-interactive
 
@@ -45,16 +52,20 @@ ${BOLD}USAGE${RESET}
   ./install.sh --update           Reinstall all (no prompts)
   ./install.sh --check            Verify installation health
   ./install.sh --list             List available skills
+  ./install.sh --dry-run          Show what would happen without changing anything
+  ./install.sh --changelog        Show changelog
   ./install.sh --version          Show version
   ./install.sh --help             Show this help
 
 ${BOLD}OPTIONS${RESET}
   -f, --force     Overwrite without prompting
+  -n, --dry-run   Preview actions without making changes
   -q, --quiet     Suppress non-error output
 
 ${BOLD}EXAMPLES${RESET}
   ./install.sh chk1               Install the chk1 skill
   ./install.sh -f chk1            Install/overwrite without prompting
+  ./install.sh --dry-run           Preview what would be installed
   ./install.sh --uninstall chk1   Remove chk1
   ./install.sh --check            Verify all installations are healthy
 
@@ -150,7 +161,11 @@ install_skill() {
     src_ver=$(get_skill_version "${source}/SKILL.md")
     dst_ver=$(get_skill_version "${target}/SKILL.md")
     if [ "$src_ver" = "$dst_ver" ] && ! "$FORCE"; then
-      ok "'${name}' is already installed (v${dst_ver}) and up to date"
+      if "$DRY_RUN"; then
+        info "[dry-run] '${name}' v${dst_ver} is already up to date — no action needed"
+      else
+        ok "'${name}' is already installed (v${dst_ver}) and up to date"
+      fi
       return 0
     fi
     if [ "$src_ver" != "$dst_ver" ]; then
@@ -160,6 +175,20 @@ install_skill() {
       warn "Skipped '${name}'"
       return 0
     fi
+  fi
+
+  # Dry-run mode
+  if "$DRY_RUN"; then
+    local src_ver
+    src_ver=$(get_skill_version "${source}/SKILL.md")
+    if [ -f "${target}/SKILL.md" ]; then
+      local dst_ver
+      dst_ver=$(get_skill_version "${target}/SKILL.md")
+      info "[dry-run] Would upgrade '${name}' v${dst_ver} -> v${src_ver} in ${target}"
+    else
+      info "[dry-run] Would install '${name}' v${src_ver} to ${target}"
+    fi
+    return 0
   fi
 
   # Create target directory
@@ -172,11 +201,20 @@ install_skill() {
     die "Failed to copy SKILL.md to ${target} — check disk space and permissions"
   fi
 
-  # Verify copy
+  # Verify copy — byte comparison + SHA256 checksum
   if ! cmp -s "${source}/SKILL.md" "${target}/SKILL.md"; then
     err "Verification failed — source and installed SKILL.md differ"
     err "Source: ${source}/SKILL.md"
     err "Target: ${target}/SKILL.md"
+    die "Installation may be corrupt. Try again with --force"
+  fi
+  local src_sha dst_sha
+  src_sha=$(shasum -a 256 "${source}/SKILL.md" | cut -d' ' -f1)
+  dst_sha=$(shasum -a 256 "${target}/SKILL.md" | cut -d' ' -f1)
+  if [ "$src_sha" != "$dst_sha" ]; then
+    err "SHA256 mismatch after copy"
+    err "Source: ${src_sha}"
+    err "Target: ${dst_sha}"
     die "Installation may be corrupt. Try again with --force"
   fi
 
@@ -317,10 +355,12 @@ while [ $# -gt 0 ]; do
     --list|-l)       list_skills; exit 0 ;;
     --check|--doctor) check_health; exit $? ;;
     --force|-f)      FORCE=true; shift ;;
+    --dry-run|-n)    DRY_RUN=true; shift ;;
     --quiet|-q)      QUIET=true; shift ;;
     --uninstall)     ACTION="uninstall"; shift ;;
     --update)        ACTION="install"; FORCE=true; shift ;;
     --all)           ALL_FLAG=true; shift ;;
+    --changelog)     if [ -f "${REPO_DIR}/CHANGELOG.md" ]; then cat "${REPO_DIR}/CHANGELOG.md"; else err "No CHANGELOG.md found"; fi; exit 0 ;;
     -*)              die "Unknown option: $1 (try --help)" ;;
     *)               TARGETS+=("$1"); shift ;;
   esac
@@ -365,14 +405,14 @@ case "$ACTION" in
       if ! confirm "Uninstall ALL skills from ${TARGET_BASE}?"; then
         die "Aborted"
       fi
-      local saved_force="$FORCE"
+      _saved_force="$FORCE"
       FORCE=true
       for dir in "${TARGET_BASE}"/*/; do
         [ -d "$dir" ] || continue
         name="$(basename "$dir")"
         uninstall_skill "$name"
       done
-      FORCE="$saved_force"
+      FORCE="$_saved_force"
       ok "All skills uninstalled"
     elif [ ${#TARGETS[@]} -eq 0 ]; then
       die "Specify a skill name: ./install.sh --uninstall <name> (or --all)"
