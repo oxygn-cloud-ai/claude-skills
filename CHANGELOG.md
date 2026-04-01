@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [1.2.0] - 2026-04-01
 
 ### Added
-- **chk2 skill** — Deep repository safety audit with 63+ checks across 8 phases: metadata & trust, supply chain, malicious code, unicode integrity, AI prompt injection, CI/CD security, code quality, and git history analysis
+- **chk2 skill** — Adversarial security audit for web services with 11 test categories (~100 checks): headers, TLS, DNS, CORS, API injection, WebSocket, WAF, infrastructure, brute force, scaling, and info disclosure
 - **CI/CD pipeline** — GitHub Actions for ShellCheck, skill validation, installer smoke tests, and file permission checks
 - **Release workflow** — Automated GitHub Releases with checksums on version tags
 - **Skill validation script** (`scripts/validate-skills.sh`) — Automated SKILL.md frontmatter and structure validation
