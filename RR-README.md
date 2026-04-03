@@ -171,7 +171,7 @@ rr doctor -- Environment Health Check
   [PASS] orchestrator scripts: 2 files found
   [PASS] sub-commands: 4 files in ~/.claude/commands/rr/
   [PASS] Atlassian MCP: connected (1 result)
-  [PASS] version: 2.3.0
+  [PASS] version: 2.4.0
 
   Result: 10 passed, 0 warnings, 0 failed
 ```
@@ -194,7 +194,8 @@ Running `./install.sh rr` from the repo root only copies `SKILL.md`. It does **n
 | `/rr all T` | Batch | Review only Technology risks |
 | `/rr all C` | Batch | Review only Compliance risks |
 | `/rr all --reset` | Batch | Delete batch work directory and start fresh |
-| `/rr status` | Utility | Check progress of a running or completed batch |
+| `/rr status` | Utility | Check progress of a running or completed batch (snapshot) |
+| `/rr monitor` | Utility | Real-time batch progress monitor (live dashboard, auto-refreshes every 5s) |
 | `/rr fix` | Utility | Re-run failed assessments or publications |
 | `/rr update` | Utility | Update to the latest version from the git repo |
 | `/rr doctor` | Utility | Run environment health checks |
@@ -241,7 +242,7 @@ RR batch review launched.
 Running in background (~30 minutes for 200 risks).
 Slack notification on completion (if SLACK_WEBHOOK_URL set).
 
-Monitor: /rr status
+Monitor: /rr monitor (or /rr status for a snapshot)
 ```
 
 #### Batch Flags
@@ -255,10 +256,16 @@ Monitor: /rr status
 #### Checking Progress
 
 ```
-/rr status
+/rr monitor
 ```
 
-Shows progress for both parallel orchestrator mode (from `~/rr-work/progress.md`) and sequential mode (from `~/rr-output/rr-progress.md`).
+Launches a live dashboard that refreshes every 5 seconds, showing current phase, file counts for each stage (dispatch, collection, publication), a progress bar, and the last log entry. Exits automatically when the batch completes.
+
+For a one-shot snapshot instead:
+
+```
+/rr status
+```
 
 #### Fixing Failures
 
@@ -423,6 +430,7 @@ Review tickets are automatically labelled based on the month of assessment:
   review.md                               Single-risk interactive workflow
   all.md                                  Batch mode (parallel + sequential fallback)
   status.md                               Progress checker
+  monitor.md                              Real-time batch progress monitor
   fix.md                                  Retry helper
 
 ~/.claude/commands/rr.md                  Router (maps /rr arguments to sub-commands)

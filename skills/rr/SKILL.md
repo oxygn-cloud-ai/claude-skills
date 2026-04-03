@@ -1,11 +1,11 @@
 ---
 name: rr
-version: 2.3.0
+version: 2.4.0
 description: "Risk register assessment for Chocolate Finance. Invoke with /rr followed by a ticket key (e.g. /rr RR-220) or /rr all for batch mode."
 user-invocable: true
 disable-model-invocation: true
 allowed-tools: Read, Grep, Glob, Bash(*), Write, Edit, Agent, AskUserQuestion, WebSearch
-argument-hint: [RR-NNN | all | status | fix | update | help | doctor | version]
+argument-hint: [RR-NNN | all | status | monitor | fix | update | help | doctor | version]
 ---
 
 # rr — Risk Register Assessment
@@ -19,7 +19,7 @@ Check $ARGUMENTS before proceeding. If it matches one of the following subcomman
 If $ARGUMENTS equals "help", "--help", or "-h", display the following usage guide and stop.
 
 ```
-rr v2.3.0 — Risk Register Assessment
+rr v2.4.0 — Risk Register Assessment
 
 USAGE
   /rr RR-220           Review a specific risk (interactive 6-step workflow)
@@ -27,7 +27,8 @@ USAGE
   /rr all --force      Batch all risks, ignore quarterly filter
   /rr all T            Batch Technology risks only
   /rr all --reset      Clear batch work directory
-  /rr status           Check batch progress
+  /rr status           Check batch progress (snapshot)
+  /rr monitor          Real-time batch progress monitor (live refresh)
   /rr fix              Re-run failed assessments
   /rr update           Update rr to latest version
   /rr help             Display this usage guide
@@ -105,7 +106,7 @@ rr doctor — Environment Health Check
   [PASS] orchestrator scripts: 2 files found
   [PASS] sub-commands: 4 files in ~/.claude/commands/rr/
   [PASS] Atlassian MCP: connected (1 result)
-  [PASS] version: 2.3.0
+  [PASS] version: 2.4.0
 
   Result: N passed, N warnings, N failed
 ```
@@ -117,7 +118,7 @@ End of doctor output. Do not continue.
 If $ARGUMENTS equals "version", "--version", or "-v", output the version and stop.
 
 ```
-rr v2.3.0
+rr v2.4.0
 ```
 
 End of version output. Do not continue.
@@ -171,6 +172,7 @@ Parse $ARGUMENTS and route:
 | Pattern matching `RR-\d+` (case-insensitive) | Invoke `/rr:review` via Skill tool, passing the full $ARGUMENTS |
 | `all` (with optional flags/filters after) | Invoke `/rr:all` via Skill tool, passing everything after `all` |
 | `status` | Invoke `/rr:status` via Skill tool |
+| `monitor` | Invoke `/rr:monitor` via Skill tool |
 | `fix` | Invoke `/rr:fix` via Skill tool |
 | anything else | Show help |
 

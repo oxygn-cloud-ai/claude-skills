@@ -42,7 +42,8 @@ cd skills/rr && ./install.sh --uninstall
 /rr all --force         Batch all risks, ignore quarterly filter
 /rr all T               Batch Technology risks only
 /rr all --reset         Clear batch work directory
-/rr status              Check batch progress
+/rr status              Check batch progress (snapshot)
+/rr monitor             Real-time batch progress monitor (live refresh)
 /rr fix                 Re-run failed assessments
 /rr update              Update to latest version
 /rr doctor              Environment health check
@@ -190,7 +191,7 @@ Or from within Claude Code:
 
 ## Version
 
-Current: **2.3.0**
+Current: **2.4.0**
 
 ## Licence
 
