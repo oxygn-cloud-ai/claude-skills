@@ -51,7 +51,13 @@ done
 mkdir -p "$WORK_DIR"/{extracts,payloads,results,errors,assessments,individual,jira-payloads,jira-results,jira-errors,progress,logs}
 : > "$LOG_FILE"
 
-# Clean stale results/errors/progress from previous runs at startup
+# Clean stale files from previous runs at startup
+rm -f "$WORK_DIR/extracts"/*.json 2>/dev/null
+rm -f "$WORK_DIR/payloads"/*.json 2>/dev/null
+rm -f "$WORK_DIR/results"/*.json 2>/dev/null
+rm -f "$WORK_DIR/errors"/*.json 2>/dev/null
+rm -f "$WORK_DIR/individual"/*.json 2>/dev/null
+rm -f "$WORK_DIR/assessments"/*.json 2>/dev/null
 rm -f "$WORK_DIR/jira-results"/*.json 2>/dev/null
 rm -f "$WORK_DIR/jira-errors"/*.json 2>/dev/null
 rm -f "$WORK_DIR/progress"/*.json 2>/dev/null

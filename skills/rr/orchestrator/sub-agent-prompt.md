@@ -6,13 +6,13 @@ You are a risk assessment sub-agent. You receive a batch of risks and produce st
 
 Before starting any assessment, read these files using the Read tool:
 
-1. `SKILLS_DIR/references/business-context.md` — Chocolate Finance facts, business model, scale, leadership
-2. `SKILLS_DIR/references/regulatory-framework.md` — MAS/SFC regulatory instruments
-3. `SKILLS_DIR/references/quality-standards.md` — Assessment rules and constraints
-4. `SKILLS_DIR/references/schemas/enums.schema.json` — Full enum and schema definitions
+1. `{{SKILLS_DIR}}/references/business-context.md` — Chocolate Finance facts, business model, scale, leadership
+2. `{{SKILLS_DIR}}/references/regulatory-framework.md` — MAS/SFC regulatory instruments
+3. `{{SKILLS_DIR}}/references/quality-standards.md` — Assessment rules and constraints
+4. `{{SKILLS_DIR}}/references/schemas/enums.schema.json` — Full enum and schema definitions
 
 Then read the batch data file using the Read tool:
-- `BATCH_FILE`
+- `{{BATCH_FILE}}`
 
 ## Task — For Each Risk
 
@@ -27,7 +27,7 @@ For each risk in the batch:
 ### Progress File
 
 After completing each risk, use the Write tool to create:
-`WORK_DIR/progress/<risk_key>.json`
+`{{WORK_DIR}}/progress/<risk_key>.json`
 
 Content:
 ```json
@@ -37,7 +37,7 @@ Content:
   "risk_name": "<short name from summary>",
   "inherent_rating": "<Low|Medium|High|Critical>",
   "residual_rating": "<Low|Medium|High|Critical>",
-  "batch_id": BATCH_ID,
+  "batch_id": {{BATCH_ID}},
   "timestamp": "<current ISO 8601 timestamp>"
 }
 ```
@@ -47,14 +47,28 @@ If assessment fails for a risk, write status `"error"` with an `"error_message"`
 ### Individual Assessment File
 
 For each successfully assessed risk, use the Write tool to create:
-`WORK_DIR/individual/<risk_key>.json`
+`{{WORK_DIR}}/individual/<risk_key>.json`
 
-Content: the full assessment object for that risk (see Assessment Schema below).
+Content: the WRAPPER object matching the entry in the assessments array — NOT the raw assessment schema. Format:
+```json
+{
+  "risk_key": "RR-NNN",
+  "status": "success",
+  "assessment": { "...full assessment with metadata + sections..." },
+  "adversarial_summary": {
+    "challenges_raised": 3,
+    "challenges_resolved": 3,
+    "unresolved_issues": []
+  }
+}
+```
+
+This is critical — `_publish_one.sh` reads `.assessment` from this file to render the Jira ticket.
 
 ## Final Result
 
 After processing ALL risks in the batch, use the Write tool to create:
-`WORK_DIR/results/result_BATCH_ID.json`
+`{{WORK_DIR}}/results/result_{{BATCH_ID}}.json`
 
 Content:
 ```json
@@ -83,9 +97,9 @@ Content:
 ## Error Handling
 
 - If a single risk cannot be assessed (no risk statement, missing critical fields): write status `"error"` in its progress file and in the assessments array, then continue to the next risk.
-- If reference files cannot be read: use the Write tool to create `WORK_DIR/errors/error_BATCH_ID.json`:
+- If reference files cannot be read: use the Write tool to create `{{WORK_DIR}}/errors/error_{{BATCH_ID}}.json`:
   ```json
-  {"batch_id": BATCH_ID, "status": "error", "error": "Failed to read reference files"}
+  {"batch_id": {{BATCH_ID}}, "status": "error", "error": "Failed to read reference files"}
   ```
   Then stop processing.
 

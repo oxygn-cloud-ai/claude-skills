@@ -105,10 +105,10 @@ For each wave of batches:
        Work directory: <absolute path to ${RR_WORK_DIR:-~/rr-work}>
        ```
      - The FULL contents of `sub-agent-prompt.md` read above, with these literal replacements applied:
-       - Replace every occurrence of `BATCH_ID` with the actual batch number
-       - Replace every occurrence of `BATCH_FILE` with the actual absolute path to the batch extract file
-       - Replace every occurrence of `WORK_DIR` with the actual absolute path to the work directory
-       - Replace every occurrence of `SKILLS_DIR` with `~/.claude/skills/rr`
+       - Replace every occurrence of `{{BATCH_ID}}` with the actual batch number
+       - Replace every occurrence of `{{BATCH_FILE}}` with the actual absolute path to the batch extract file
+       - Replace every occurrence of `{{WORK_DIR}}` with the actual absolute path to the work directory
+       - Replace every occurrence of `{{SKILLS_DIR}}` with `~/.claude/skills/rr`
 
    Launch ALL agents in this wave in a single message (parallel Agent tool calls).
 
