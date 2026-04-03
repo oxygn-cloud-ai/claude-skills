@@ -42,7 +42,7 @@ An interactive, 6-step workflow for assessing one risk at a time:
 | 3 | **Rectified Assessment** | Addresses every challenge from Step 2 by either correcting the assessment or retaining the original position with justification. All changes are tracked in a `changes_from_previous` object. | None (automatic) |
 | 4 | **Discussion** | Claude initiates a conversation with you about unresolved points in the assessment. It asks one question at a time about internal controls, regulatory obligations, data quality, and judgment-based ratings. You can also raise your own challenges. | Interactive Q&A |
 | 5 | **Final Assessment** | Incorporates all discussion outcomes into a final assessment. Presents it to you for review. | You must confirm before proceeding |
-| 6 | **Publish to Jira** | Creates (or updates) a Review child ticket under the parent Risk in Jira. Attaches all 7 workflow JSON files as artifacts. Updates the progress file if running in batch mode. | None (automatic) |
+| 6 | **Publish to Jira** | Creates (or updates) a Review child ticket under the parent Risk in Jira with summary `"Review: 2026: Q2"` (quarter auto-detected or overridden via `--qtr`). Attaches workflow JSON files as artifacts. Updates the progress file if running in batch mode. | None (automatic) |
 
 Each completed review produces **7 JSON files** that form a complete audit trail:
 
@@ -74,6 +74,12 @@ Fully autonomous parallel processing for reviewing the entire risk register in o
 
 Sub-agents are stateless Claude API calls with all business context and regulatory framework embedded in the system prompt. Each sub-agent performs its own self-adversarial review internally (draft, challenge, rectify) before returning the final assessment.
 
+Each batch-published Review ticket includes:
+- Full assessment rendered as rich ADF (headings, tables, bold text, bullet lists)
+- Summary in format `"Review: 2026: Q2"` (quarter auto-detected or overridable via `--qtr:Q1`)
+- Quarterly label (e.g., `Q2-Risk-Review`)
+- 4 attached JSON files: `adversarial_review.json`, `assessment_final.json`, `combined.json`, `jira_ticket.json`
+
 If `ANTHROPIC_API_KEY` is not set or the orchestrator scripts are missing, batch mode falls back to **sequential mode**: Claude processes risks one at a time through the full 6-step interactive workflow, tracking progress in a resumable progress file.
 
 ---
@@ -101,9 +107,10 @@ If `ANTHROPIC_API_KEY` is not set or the orchestrator scripts are missing, batch
 
 ### Optional
 
-| Requirement | Purpose |
-|------------|---------|
-| `SLACK_WEBHOOK_URL` | Receive a Slack notification when batch mode completes |
+| Requirement | Purpose | Install |
+|------------|---------|---------|
+| `SLACK_WEBHOOK_URL` | Receive a Slack notification when batch mode completes | Set in shell profile |
+| Python `rich` library | Live batch progress dashboard (`/rr monitor`) | `pip3 install rich` |
 
 ### Setting Environment Variables
 
@@ -140,9 +147,9 @@ This installs:
 |------------|----------|-------|
 | `~/.claude/skills/rr/SKILL.md` | Main skill definition | 1 file |
 | `~/.claude/skills/rr/.source-repo` | Repo path marker (enables `/rr update`) | 1 file |
-| `~/.claude/skills/rr/orchestrator/` | Batch orchestrator scripts | 8 files |
+| `~/.claude/skills/rr/orchestrator/` | Batch orchestrator scripts | 9 files |
 | `~/.claude/skills/rr/references/` | Schemas, workflow steps, business context, regulatory framework | 16 files |
-| `~/.claude/commands/rr/` | Sub-command files (review, all, status, fix) | 4 files |
+| `~/.claude/commands/rr/` | Sub-command files (review, all, status, monitor, fix, help, etc.) | 10 files |
 | `~/.claude/commands/rr.md` | Router file | 1 file |
 
 ### Verify Installation
@@ -168,10 +175,10 @@ rr doctor -- Environment Health Check
   [PASS] JIRA_EMAIL: set
   [PASS] JIRA_API_KEY: set
   [PASS] reference files: 9 files found
-  [PASS] orchestrator scripts: 2 files found
-  [PASS] sub-commands: 4 files in ~/.claude/commands/rr/
+  [PASS] orchestrator scripts: 9 files found
+  [PASS] sub-commands: 10 files in ~/.claude/commands/rr/
   [PASS] Atlassian MCP: connected (1 result)
-  [PASS] version: 2.8.3
+  [PASS] version: 2.9.0
 
   Result: 10 passed, 0 warnings, 0 failed
 ```
@@ -191,6 +198,7 @@ Running `./install.sh rr` from the repo root only copies `SKILL.md`. It does **n
 | `/rr RR-220` | Single | Review a specific risk (interactive 6-step workflow) |
 | `/rr all` | Batch | Review all risks (parallel sub-agents or sequential fallback) |
 | `/rr all --force` | Batch | Review all risks, bypassing the quarterly filter |
+| `/rr all --force --qtr:Q1` | Batch | Review all risks, labelling them as Q1 (override auto-detected quarter) |
 | `/rr all T` | Batch | Review only Technology risks |
 | `/rr all C` | Batch | Review only Compliance risks |
 | `/rr all --reset` | Batch | Delete batch work directory and start fresh |
@@ -251,6 +259,7 @@ Monitor: /rr monitor (or /rr status for a snapshot)
 |------|--------|
 | `--force` | Process all risks regardless of whether they've been reviewed this quarter |
 | `--reset` | Delete the work directory and start fresh (asks for confirmation) |
+| `--qtr:Q1` | Override the quarter for ticket summaries and labels (Q1, Q2, Q3, or Q4) |
 | `T`, `C`, `F`, etc. | Filter by risk category prefix |
 
 #### Checking Progress
@@ -259,7 +268,7 @@ Monitor: /rr monitor (or /rr status for a snapshot)
 /rr monitor
 ```
 
-Launches a live dashboard that refreshes every 5 seconds, showing current phase, file counts for each stage (dispatch, collection, publication), a progress bar, and the last log entry. Exits automatically when the batch completes.
+Opens a live dashboard in a new terminal window (requires Python `rich` library: `pip3 install rich`). Refreshes every 2 seconds showing current phase, file counts for each stage, a progress bar, and tailed log output. Exits automatically when the batch completes.
 
 For a one-shot snapshot instead:
 
@@ -378,7 +387,7 @@ These values are hard-coded in the reference files and orchestrator scripts:
 
 ### Quarterly Labels
 
-Review tickets are automatically labelled based on the month of assessment:
+Review tickets are automatically labelled based on the month of assessment. Use `--qtr:Q1` (or Q2, Q3, Q4) to override:
 
 | Assessment Month | Label |
 |-----------------|-------|
@@ -405,6 +414,7 @@ Review tickets are automatically labelled based on the month of assessment:
     publish.sh                            Jira publication manifest generator
     _dispatch_one.sh                      Per-batch dispatch wrapper (macOS-safe parallelism)
     _publish_one.sh                       Per-risk publish wrapper (macOS-safe parallelism)
+    monitor.py                            Live batch progress dashboard (requires `rich` library)
     sub-agent-system-prompt.txt           System prompt embedded in all sub-agent API calls
   references/
     business-context.md                   Operational facts and business context
@@ -432,6 +442,11 @@ Review tickets are automatically labelled based on the month of assessment:
   status.md                               Progress checker
   monitor.md                              Real-time batch progress monitor
   fix.md                                  Retry helper
+  remove.md                               Delete Review tickets (testing only)
+  help.md                                 Usage guide
+  version.md                              Version display
+  update.md                               Update to latest version
+  doctor.md                               Environment health check
 
 ~/.claude/commands/rr.md                  Router (maps /rr arguments to sub-commands)
 ```
@@ -550,7 +565,7 @@ The full regulatory reference with applicability notes is in `~/.claude/skills/r
 | Batch mode falls back to sequential | Orchestrator scripts missing or env vars not set | Run `/rr doctor` to identify what's missing |
 | `jq: command not found` during batch | jq not installed | `brew install jq` |
 | Batch progress lost | Work directory deleted or session crashed | Check `~/rr-work/progress.md` or `~/rr-output/rr-progress.md` |
-| Duplicate Review tickets created | Ran batch twice on same day without `--force` | The quarterly filter should prevent this. If it didn't, check the filter-result.json for issues |
+| Duplicate Review tickets created | Ran batch twice in the same quarter | The idempotency check searches for existing Reviews matching `"Review: <year>: <quarter>"` under each parent. If duplicates appear, check filter-result.json |
 | Step 6 fails with 401 | Jira credentials expired or wrong | Regenerate API token at id.atlassian.com |
 | Step 6 fails with 403 | No permission to create issues in RR project | Request Create permission from Jira admin |
 | File attachments fail | `JIRA_EMAIL` or `JIRA_API_KEY` not set for curl-based attachment | Set both env vars |
