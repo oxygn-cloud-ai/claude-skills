@@ -1,15 +1,31 @@
-# rr:remove — Delete All Review Tickets from Jira (TESTING ONLY)
+# rr:remove — Delete Review Tickets from Jira (TESTING ONLY)
 
 **WARNING: This is a destructive, hidden testing command. It deletes Jira tickets.**
 
 Context from user: $ARGUMENTS
 
-## Safety Checks
+## Parse Arguments
 
-Before doing ANYTHING, confirm with user:
+Determine the mode from $ARGUMENTS:
+
+| Input | Mode | Action |
+|-------|------|--------|
+| `remove` (no args) | All Reviews | Delete every Review ticket in project RR |
+| `remove RR-220` | Parent Reviews | Delete all Review children of RR-220 |
+| `remove RR-220 RR-221 RR-222` | Parent Reviews | Delete all Review children of each listed parent |
+| `remove RR-840` (where RR-840 is a Review) | Single Review | Delete that one Review ticket only |
+| `remove RR-840 RR-841` (where both are Reviews) | Single Reviews | Delete those specific Review tickets |
+
+To distinguish: if a ticket key is given, query its `issuetype`. If it's a Risk, find its Review children. If it's a Review, delete it directly.
+
+---
+
+## Mode 1: Delete ALL Review Tickets
+
+### Safety Confirmation
 
 ```
-WARNING: This will DELETE all Review tickets in the RR project.
+WARNING: This will DELETE ALL Review tickets in the RR project.
 
 - ONLY Review tickets (issue type ID 12686) will be deleted
 - Risk items (parent tickets) will NOT be touched
@@ -21,17 +37,12 @@ Type "DELETE ALL REVIEWS" to confirm:
 
 Wait for the user to type exactly `DELETE ALL REVIEWS`. Any other response: abort.
 
-## Process
-
-### Step 1 — Query all Review tickets
-
-Use the Bash tool to query Jira for all Review tickets:
+### Query
 
 ```bash
 JIRA_AUTH=$(echo -n "${JIRA_EMAIL}:${JIRA_API_KEY}" | base64 | tr -d '\n')
 JIRA_BASE_URL="https://chocfin.atlassian.net"
 
-# Paginate through all Review tickets
 all_keys=""
 next_page_token=""
 while true; do
@@ -46,7 +57,6 @@ while true; do
     -H "Content-Type: application/json" \
     -d "$payload" --max-time 30)
 
-  # Extract keys — DOUBLE CHECK each is issuetype Review (ID 12686)
   batch_keys=$(echo "$resp" | jq -r '.issues[] | select(.fields.issuetype.id == "12686" or .fields.issuetype.name == "Review") | .key')
   all_keys="$all_keys $batch_keys"
 
@@ -56,24 +66,85 @@ done
 
 count=$(echo "$all_keys" | wc -w | tr -d ' ')
 echo "Found $count Review tickets to delete"
-echo "$all_keys"
 ```
 
-### Step 2 — Show the user what will be deleted
+Show count, first 10 keys, ask "Proceed? (yes/no)". Then delete (see Deletion section below).
 
-Display the count and ask for final confirmation:
+---
+
+## Mode 2: Delete Review Children of Specific Risk(s)
+
+For each ticket key provided in $ARGUMENTS:
+
+### Step 1 — Verify it's a Risk (not a Review or Mitigation)
+
+```bash
+JIRA_AUTH=$(echo -n "${JIRA_EMAIL}:${JIRA_API_KEY}" | base64 | tr -d '\n')
+JIRA_BASE_URL="https://chocfin.atlassian.net"
+
+resp=$(curl -s "$JIRA_BASE_URL/rest/api/3/issue/RR-220?fields=issuetype,summary" \
+  -H "Authorization: Basic $JIRA_AUTH" --max-time 15)
+
+issue_type=$(echo "$resp" | jq -r '.fields.issuetype.name')
+echo "$issue_type"
+```
+
+- If `Risk`: proceed to find its Review children
+- If `Review`: switch to Mode 3 (delete this single Review directly)
+- If `Mitigation` or anything else: **refuse to delete**, tell user this is not a Risk or Review
+
+### Step 2 — Find all Review children of the Risk
+
+```bash
+jql="project = RR AND issuetype = Review AND parent = RR-220 ORDER BY key ASC"
+```
+
+Use the same paginated search as Mode 1 but with the parent filter.
+
+### Step 3 — Confirm with user
 
 ```
-Found N Review tickets.
+Found N Review tickets under RR-220:
+  RR-840: Review: 2026, Apr 03
+  RR-841: Review: 2026, Apr 03
+  ...
 
-First 10: RR-840, RR-841, RR-842, ...
-
-Proceed with deletion? (yes/no)
+Delete these N Review tickets? (yes/no)
 ```
 
-### Step 3 — Delete each Review ticket
+Then delete (see Deletion section below).
 
-Delete one at a time with rate limiting (1 second delay between calls):
+---
+
+## Mode 3: Delete Specific Review Ticket(s)
+
+For each ticket key provided:
+
+### Step 1 — Verify it's a Review
+
+Query the ticket and check `issuetype.name == "Review"` or `issuetype.id == "12686"`.
+
+- If Review: add to deletion list
+- If Risk: ask user "RR-220 is a Risk, not a Review. Delete all its Review children instead? (yes/no)"
+- If Mitigation or other: **refuse**. Say "RR-XXX is a Mitigation, not a Review. Skipping."
+
+### Step 2 — Confirm
+
+```
+Will delete N Review ticket(s):
+  RR-840: Review: 2026, Apr 03
+  RR-841: Review: 2026, Apr 03
+
+Proceed? (yes/no)
+```
+
+Then delete (see Deletion section below).
+
+---
+
+## Deletion (shared by all modes)
+
+Delete one at a time with rate limiting:
 
 ```bash
 JIRA_AUTH=$(echo -n "${JIRA_EMAIL}:${JIRA_API_KEY}" | base64 | tr -d '\n')
@@ -93,7 +164,6 @@ for key in $ALL_KEYS; do
   elif [ "$http_code" = "429" ]; then
     echo "Rate limited at $key — sleeping 30s"
     sleep 30
-    # Retry once
     http_code=$(curl -s -o /dev/null -w "%{http_code}" \
       -X DELETE "$JIRA_BASE_URL/rest/api/3/issue/$key" \
       -H "Authorization: Basic $JIRA_AUTH" \
@@ -110,16 +180,15 @@ for key in $ALL_KEYS; do
     echo "FAILED to delete $key: HTTP $http_code"
   fi
 
-  sleep 1  # Rate limit: 1 request per second
+  sleep 1
 done
 
 echo ""
 echo "Complete: $deleted deleted, $failed failed"
 ```
 
-### Step 4 — Report
+## Report
 
-Show final count:
 ```
 Review ticket cleanup complete.
 Deleted: N
@@ -132,6 +201,8 @@ Mitigation items: untouched
 
 1. **NEVER delete tickets where issuetype is NOT "Review" (ID 12686)**
 2. **NEVER delete tickets outside project RR**
-3. **Always verify issuetype in the JQL AND in the jq filter (defense in depth)**
-4. **Always require explicit user confirmation**
+3. **Always verify issuetype before deleting — via JQL filter AND per-ticket check**
+4. **Always require explicit user confirmation before any deletion**
 5. **Rate limit: maximum 1 delete per second to avoid 429s**
+6. **If a ticket is a Mitigation: REFUSE. Do not offer alternatives.**
+7. **If a ticket is a Risk: offer to delete its Review children, never the Risk itself**
