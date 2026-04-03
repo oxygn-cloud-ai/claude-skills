@@ -128,17 +128,16 @@ If $ARGUMENTS equals "update", "--update", or "upgrade":
 
 1. Read the source repo path from `~/.claude/skills/rr/.source-repo`
 2. If found:
-   - `cd` to the repo path
-   - `git pull`
-   - Compare installed version (from this SKILL.md frontmatter) with repo version
-   - If different: run `bash install.sh --force` from the repo
-   - If same: report already at latest
+   - Run `git -C <repo-path> pull` to update the repo
+   - Compare installed version (from `~/.claude/skills/rr/SKILL.md` frontmatter) with repo version (from `<repo-path>/SKILL.md` frontmatter)
+   - If different: run `bash <repo-path>/install.sh --force` (the per-skill installer, which updates SKILL.md, orchestrator scripts, reference files, sub-commands, and router)
+   - If same: report already at latest version
 3. If `.source-repo` not found:
    ```
    rr update — source repo not configured.
    Clone the repo and run install.sh to set up the source link:
-     git clone <repo-url>
-     cd <repo-dir>
+     git clone https://github.com/oxygn-cloud-ai/claude-skills.git
+     cd claude-skills/skills/rr
      bash install.sh
    ```
 
