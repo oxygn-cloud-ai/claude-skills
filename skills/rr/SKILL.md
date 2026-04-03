@@ -1,6 +1,6 @@
 ---
 name: rr
-version: 2.5.2
+version: 2.5.3
 description: "Risk register assessment for Chocolate Finance. Invoke with /rr followed by a ticket key (e.g. /rr RR-220) or /rr all for batch mode."
 user-invocable: true
 disable-model-invocation: true
@@ -19,7 +19,7 @@ Check $ARGUMENTS before proceeding. If it matches one of the following subcomman
 If $ARGUMENTS equals "help", "--help", or "-h", display the following usage guide and stop.
 
 ```
-rr v2.5.2 — Risk Register Assessment
+rr v2.5.3 — Risk Register Assessment
 
 USAGE
   /rr RR-220           Review a specific risk (interactive 6-step workflow)
@@ -106,7 +106,7 @@ rr doctor — Environment Health Check
   [PASS] orchestrator scripts: 2 files found
   [PASS] sub-commands: 4 files in ~/.claude/commands/rr/
   [PASS] Atlassian MCP: connected (1 result)
-  [PASS] version: 2.5.2
+  [PASS] version: 2.5.3
 
   Result: N passed, N warnings, N failed
 ```
@@ -118,7 +118,7 @@ End of doctor output. Do not continue.
 If $ARGUMENTS equals "version", "--version", or "-v", output the version and stop.
 
 ```
-rr v2.5.2
+rr v2.5.3
 ```
 
 End of version output. Do not continue.
@@ -130,9 +130,8 @@ If $ARGUMENTS equals "update", "--update", or "upgrade":
 1. Read the source repo path from `~/.claude/skills/rr/.source-repo`
 2. If found:
    - Run `git -C <repo-path> pull` to update the repo
-   - Compare installed version (from `~/.claude/skills/rr/SKILL.md` frontmatter) with repo version (from `<repo-path>/SKILL.md` frontmatter)
-   - If different: run `bash <repo-path>/install.sh --force` (the per-skill installer, which updates SKILL.md, orchestrator scripts, reference files, sub-commands, and router)
-   - If same: report already at latest version
+   - Always run `bash <repo-path>/install.sh --force` (the per-skill installer, which updates SKILL.md, orchestrator scripts, reference files, sub-commands, and router)
+   - Report the installed version after install completes (read from the freshly installed `~/.claude/skills/rr/SKILL.md`)
 3. If `.source-repo` not found:
    ```
    rr update — source repo not configured.
