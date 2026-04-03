@@ -1,0 +1,71 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "jira-export.schema.json",
+  "title": "Jira Export",
+  "description": "Normalised extraction of a Risk ticket and its children from Jira. Produced in Step 1c.",
+
+  "type": "object",
+  "required": ["export_metadata", "parent_risk", "child_tickets"],
+  "additionalProperties": false,
+
+  "properties": {
+    "export_metadata": {
+      "type": "object",
+      "required": ["exported_at", "source_ticket", "cloud_id", "project_key"],
+      "properties": {
+        "exported_at": { "$ref": "enums.schema.json#/definitions/iso8601_date" },
+        "exported_at_time": { "type": "string", "format": "time" },
+        "source_ticket": { "$ref": "enums.schema.json#/definitions/ticket_key" },
+        "cloud_id": { "type": "string" },
+        "project_key": { "type": "string", "const": "RR" }
+      }
+    },
+
+    "parent_risk": {
+      "type": "object",
+      "required": ["key", "summary", "description", "status", "priority", "category", "issue_type_id"],
+      "properties": {
+        "key": { "$ref": "enums.schema.json#/definitions/ticket_key" },
+        "summary": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
+        "status": { "type": "string" },
+        "priority": { 
+          "type": "string",
+          "enum": ["High Risk", "Medium Risk", "Low Risk"]
+        },
+        "category": { "$ref": "enums.schema.json#/definitions/risk_category" },
+        "issue_type_id": { "type": "string", "const": "12724" },
+        "created": { "type": "string", "format": "date-time" },
+        "updated": { "type": "string", "format": "date-time" },
+        "assignee": { "type": ["string", "null"] },
+        "reporter": { "type": ["string", "null"] },
+        "labels": { "type": "array", "items": { "type": "string" } },
+        "custom_fields": { "type": "object" }
+      }
+    },
+
+    "child_tickets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["key", "issue_type", "summary", "created"],
+        "properties": {
+          "key": { "$ref": "enums.schema.json#/definitions/ticket_key" },
+          "issue_type": {
+            "type": "string",
+            "enum": ["Review", "Mitigation"]
+          },
+          "issue_type_id": {
+            "type": "string",
+            "enum": ["12686", "12722"]
+          },
+          "summary": { "type": "string" },
+          "description": { "type": "string" },
+          "status": { "type": "string" },
+          "created": { "type": "string", "format": "date-time" },
+          "updated": { "type": "string", "format": "date-time" }
+        }
+      }
+    }
+  }
+}

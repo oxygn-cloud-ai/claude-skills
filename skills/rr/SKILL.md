@@ -1,0 +1,300 @@
+---
+name: rr
+version: 2.0.0
+description: "Risk register assessment for Chocolate Finance. Invoke with /rr followed by a ticket key (e.g. /rr RR-220) or /rr all for batch mode."
+user-invocable: true
+disable-model-invocation: true
+allowed-tools: Read, Grep, Glob, Bash(*), Write, Edit, Agent, AskUserQuestion, WebSearch
+argument-hint: [RR-NNN | all | status | fix | update | help | doctor | version]
+---
+
+# rr — Risk Register Assessment
+
+## Subcommands
+
+Check $ARGUMENTS before proceeding. If it matches one of the following subcommands, execute that subcommand and stop.
+
+### help
+
+If $ARGUMENTS equals "help", "--help", or "-h", display the following usage guide and stop.
+
+```
+rr v2.0.0 — Risk Register Assessment
+
+USAGE
+  /rr RR-220           Review a specific risk (interactive 6-step workflow)
+  /rr all              Batch review all risks (parallel sub-agents)
+  /rr all --force      Batch all risks, ignore quarterly filter
+  /rr all T            Batch Technology risks only
+  /rr all --reset      Clear batch work directory
+  /rr status           Check batch progress
+  /rr fix              Re-run failed assessments
+  /rr update           Update rr to latest version
+  /rr help             Display this usage guide
+  /rr doctor           Check environment health
+  /rr version          Show installed version
+
+MODES
+  Single Risk    /rr RR-NNN    Interactive 6-step workflow with user discussion
+  Batch Mode     /rr all       Autonomous parallel processing via sub-agents
+
+ENVIRONMENT VARIABLES
+  RR_OUTPUT_DIR         Output directory (default: ~/rr-output)
+  RR_WORK_DIR           Batch work directory (default: ~/rr-work)
+  ANTHROPIC_API_KEY     Required for batch parallel mode
+  JIRA_EMAIL            Required for batch mode Jira API
+  JIRA_API_TOKEN        Required for batch mode Jira API
+  SLACK_WEBHOOK_URL     Optional batch completion notification
+  RR_MODEL              Sub-agent model (default: claude-sonnet-4-20250514)
+
+WORKFLOW (Single Risk)
+  Step 1: Extract & Draft     Retrieve from Jira, initial assessment
+  Step 2: Adversarial Review  Challenge against 8 criteria
+  Step 3: Rectified Assessment Address challenges
+  Step 4: Discussion          Resolve uncertainties with user
+  Step 5: Final Assessment    User confirms before publishing
+  Step 6: Publish to Jira     Create Review child ticket
+
+LOCATION
+  ~/.claude/skills/rr/SKILL.md
+  ~/.claude/commands/rr/*.md (sub-commands)
+  ~/.claude/skills/rr/orchestrator/ (batch scripts)
+  ~/.claude/skills/rr/references/ (schemas, workflow, context)
+```
+
+End of help output. Do not continue.
+
+### doctor
+
+If $ARGUMENTS equals "doctor", "--doctor", or "check", run environment diagnostics and stop.
+
+**Checks:**
+1. Verify `curl` is available: `which curl`
+2. Verify `jq` is available: `which jq`
+3. Check env vars (report set/not set, **never display values**):
+   - `ANTHROPIC_API_KEY`
+   - `JIRA_EMAIL`
+   - `JIRA_API_TOKEN`
+4. Check reference files exist:
+   - `ls ~/.claude/skills/rr/references/schemas/enums.schema.json`
+   - `ls ~/.claude/skills/rr/references/business-context.md`
+   - `ls ~/.claude/skills/rr/references/jira-config.md`
+   - `ls ~/.claude/skills/rr/references/workflow/step-1-extract.md`
+   - `ls ~/.claude/skills/rr/references/workflow/step-2-adversarial.md`
+   - `ls ~/.claude/skills/rr/references/workflow/step-3-rectify.md`
+   - `ls ~/.claude/skills/rr/references/workflow/step-4-discussion.md`
+   - `ls ~/.claude/skills/rr/references/workflow/step-5-finalise.md`
+   - `ls ~/.claude/skills/rr/references/workflow/step-6-publish.md`
+5. Check orchestrator scripts exist:
+   - `ls ~/.claude/skills/rr/orchestrator/rr-batch.sh`
+   - `ls ~/.claude/skills/rr/orchestrator/retry.sh`
+6. Check sub-command files exist:
+   - `ls ~/.claude/commands/rr/*.md`
+7. Try Atlassian MCP connectivity: attempt `mcp__claude_ai_Atlassian__searchJiraIssuesUsingJql` with JQL `project = RR AND issuetype = Risk` limit 1
+
+Format:
+```
+rr doctor — Environment Health Check
+
+  [PASS] curl: /usr/bin/curl
+  [PASS] jq: /usr/local/bin/jq
+  [PASS] ANTHROPIC_API_KEY: set
+  [WARN] JIRA_EMAIL: not set
+  [WARN] JIRA_API_TOKEN: not set
+  [PASS] reference files: 9 files found
+  [PASS] orchestrator scripts: 2 files found
+  [PASS] sub-commands: 4 files in ~/.claude/commands/rr/
+  [PASS] Atlassian MCP: connected (1 result)
+  [PASS] version: 2.0.0
+
+  Result: N passed, N warnings, N failed
+```
+
+End of doctor output. Do not continue.
+
+### version
+
+If $ARGUMENTS equals "version", "--version", or "-v", output the version and stop.
+
+```
+rr v2.0.0
+```
+
+End of version output. Do not continue.
+
+### update
+
+If $ARGUMENTS equals "update", "--update", or "upgrade":
+
+1. Read the source repo path from `~/.claude/skills/rr/.source-repo`
+2. If found:
+   - `cd` to the repo path
+   - `git pull`
+   - Compare installed version (from this SKILL.md frontmatter) with repo version
+   - If different: run `bash install.sh --force` from the repo
+   - If same: report already at latest
+3. If `.source-repo` not found:
+   ```
+   rr update — source repo not configured.
+   Clone the repo and run install.sh to set up the source link:
+     git clone <repo-url>
+     cd <repo-dir>
+     bash install.sh
+   ```
+
+End of update output. Do not continue.
+
+---
+
+## Pre-flight Checks
+
+Before executing, silently verify:
+
+1. **Reference files readable**: Check that `~/.claude/skills/rr/references/schemas/enums.schema.json` exists. If not:
+   > **rr error**: Reference files not found at ~/.claude/skills/rr/references/. Run `/rr doctor` to diagnose.
+
+2. **Sub-commands installed**: `ls ~/.claude/commands/rr/*.md` finds files. If not:
+   > **rr warning**: Sub-command files not found in ~/.claude/commands/rr/. Running inline.
+
+---
+
+## Routing
+
+Parse $ARGUMENTS and route:
+
+| Argument | Action |
+|----------|--------|
+| (empty) | Show help (same as `help` subcommand above) |
+| `help`, `--help`, `-h` | Show help (handled in Subcommands above) |
+| `doctor`, `--doctor`, `check` | Run diagnostics (handled in Subcommands above) |
+| `version`, `--version`, `-v` | Show version (handled in Subcommands above) |
+| `update` | Check for updates (handled in Subcommands above) |
+| Pattern matching `RR-\d+` (case-insensitive) | Invoke `/rr:review` via Skill tool, passing the full $ARGUMENTS |
+| `all` (with optional flags/filters after) | Invoke `/rr:all` via Skill tool, passing everything after `all` |
+| `status` | Invoke `/rr:status` via Skill tool |
+| `fix` | Invoke `/rr:fix` via Skill tool |
+| anything else | Show help |
+
+If the sub-command `.md` files exist in `~/.claude/commands/rr/`, invoke them via the Skill tool. Otherwise, execute the logic inline using the workflow overview below.
+
+---
+
+## Configuration
+
+| Environment Variable | Default | Purpose |
+|---------------------|---------|---------|
+| `RR_OUTPUT_DIR` | `~/rr-output` | Directory for individual risk output files |
+| `RR_WORK_DIR` | `~/rr-work` | Batch mode working directory |
+| `ANTHROPIC_API_KEY` | (none) | Required for parallel batch sub-agents |
+| `JIRA_EMAIL` | (none) | Required for batch mode Jira REST API |
+| `JIRA_API_TOKEN` | (none) | Required for batch mode Jira REST API |
+| `SLACK_WEBHOOK_URL` | (none) | Optional Slack notification on batch completion |
+| `RR_MODEL` | `claude-sonnet-4-20250514` | Model used by batch sub-agents |
+
+---
+
+## Quick Reference
+
+| Field | Value |
+|-------|-------|
+| Jira Project | RR |
+| Cloud ID | `81a55da4-28c8-4a49-8a47-03a98a73f152` |
+| Issue Types | Risk (parent), Review (child), Mitigation (child) |
+
+### Rating Matrix
+
+| Likelihood x Impact | Rating |
+|---------------------|--------|
+| High x High | **Critical** |
+| High x Medium | High |
+| High x Low | Medium |
+| Medium x High | High |
+| Medium x Medium | Medium |
+| Medium x Low | Low |
+| Low x High | Medium |
+| Low x Medium | Low |
+| Low x Low | Low |
+
+### Enum Values
+
+| Field | Allowed Values |
+|-------|----------------|
+| `likelihood` | Low, Medium, High |
+| `impact` | Low, Medium, High |
+| `rating` | Low, Medium, High, Critical |
+| `risk_category` | A, B, C, D, ER, F, I, L, O, OO, P, T |
+| `control_type` | Preventive, Detective, Corrective |
+| `control_effectiveness` | Effective, Partially Effective, Ineffective, Uncertain |
+| `assessment_status` | draft, adversarial_reviewed, rectified, final |
+
+---
+
+## Single Risk Workflow Overview
+
+If sub-command files are not installed, use this inline fallback. Each step reads its detailed instructions from the reference files.
+
+### Step 1 — Extract and Draft
+Read: `~/.claude/skills/rr/references/workflow/step-1-extract.md`
+Retrieve target risk from Jira, fetch child tickets, export to JSON, draft initial assessment.
+
+### Step 2 — Adversarial Review
+Read: `~/.claude/skills/rr/references/workflow/step-2-adversarial.md`
+Challenge Assessment 1 against 8 criteria. Verify regulatory citations via web search.
+
+### Step 3 — Rectified Assessment
+Read: `~/.claude/skills/rr/references/workflow/step-3-rectify.md`
+Address every challenge from Step 2. Track changes in `changes_from_previous`.
+
+### Step 4 — Discussion
+Read: `~/.claude/skills/rr/references/workflow/step-4-discussion.md`
+Initiate discussion with user. Ask about unresolved points one at a time. Do NOT wait passively.
+
+### Step 5 — Final Assessment
+Read: `~/.claude/skills/rr/references/workflow/step-5-finalise.md`
+Incorporate discussion outcomes. Produce final assessment. **Wait for user confirmation** before Step 6.
+
+### Step 6 — Publish to Jira
+Read: `~/.claude/skills/rr/references/workflow/step-6-publish.md`
+Check for existing same-day Review. Create or update Review child ticket. Attach workflow files.
+
+---
+
+## File Naming Convention
+
+All files saved to `${RR_OUTPUT_DIR:-~/rr-output}/`:
+
+| Pattern | Example |
+|---------|---------|
+| `<key>_export.json` | `rr-220_export.json` |
+| `<key>_<date>_assessment_1.json` | `rr-220_2026-04-02_assessment_1.json` |
+| `<key>_<date>_adversarial_review.json` | `rr-220_2026-04-02_adversarial_review.json` |
+| `<key>_<date>_assessment_2.json` | `rr-220_2026-04-02_assessment_2.json` |
+| `<key>_<date>_discussion.json` | `rr-220_2026-04-02_discussion.json` |
+| `<key>_<date>_assessment_final.json` | `rr-220_2026-04-02_assessment_final.json` |
+| `<key>_<date>_jira_ticket.json` | `rr-220_2026-04-02_jira_ticket.json` |
+
+- `<key>`: Lowercase with hyphen (e.g., `rr-220`)
+- `<date>`: ISO format `yyyy-mm-dd`
+
+---
+
+## Validation
+
+Before each step, validate the previous step's output:
+
+1. JSON parses successfully
+2. Required fields present
+3. Enum values match allowed lists
+4. Ratings follow the matrix
+
+If validation fails, halt and report the error.
+
+---
+
+## Prohibited Actions
+
+- Do not modify the parent Risk item
+- Do not modify existing Mitigation or Review tickets
+- Do not assign tickets unless instructed
+- Do not fabricate regulatory citations
+- Do not proceed past Step 5 without user confirmation

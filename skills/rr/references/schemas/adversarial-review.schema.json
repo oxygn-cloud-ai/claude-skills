@@ -1,0 +1,200 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "adversarial-review.schema.json",
+  "title": "Adversarial Review",
+  "description": "Structured adversarial challenge of an assessment. Produced in Step 2.",
+
+  "type": "object",
+  "required": ["metadata", "challenges", "regulatory_verification", "summary"],
+  "additionalProperties": false,
+
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "required": ["ticket_key", "review_date", "source_assessment", "source_iteration"],
+      "properties": {
+        "ticket_key": { "$ref": "enums.schema.json#/definitions/ticket_key" },
+        "review_date": { "$ref": "enums.schema.json#/definitions/iso8601_date" },
+        "source_assessment": { 
+          "type": "string",
+          "description": "Filename of the assessment being reviewed"
+        },
+        "source_iteration": { 
+          "type": "integer",
+          "const": 1,
+          "description": "Adversarial review always applies to iteration 1"
+        },
+        "reviewer": { "type": "string", "const": "Claude (Anthropic) — Adversarial Mode" }
+      }
+    },
+
+    "challenges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "section", "challenge_type", "original_claim", "challenge", "resolution_required"],
+        "properties": {
+          "id": { 
+            "type": "string", 
+            "pattern": "^CH\\d{3}$",
+            "description": "Challenge ID in format CH001, CH002, etc."
+          },
+          "section": {
+            "type": "string",
+            "enum": [
+              "header",
+              "context",
+              "regulatory_framework",
+              "inherent_risk",
+              "existing_controls",
+              "residual_risk",
+              "recommendations",
+              "evidences"
+            ]
+          },
+          "challenge_type": { "$ref": "enums.schema.json#/definitions/challenge_type" },
+          "original_claim": { 
+            "type": "string",
+            "description": "The specific claim or assertion being challenged"
+          },
+          "challenge": { 
+            "type": "string",
+            "minLength": 20,
+            "description": "Why this claim is problematic"
+          },
+          "evidence_for_challenge": {
+            "type": "string",
+            "description": "Supporting evidence for the challenge (e.g., web search result)"
+          },
+          "resolution_required": {
+            "type": "string",
+            "enum": ["correction_required", "evidence_required", "clarification_required", "removal_required", "user_verification_required"]
+          },
+          "suggested_resolution": {
+            "type": "string",
+            "description": "How to fix this issue"
+          },
+          "severity": {
+            "type": "string",
+            "enum": ["critical", "major", "minor"],
+            "description": "Impact on assessment validity"
+          }
+        }
+      }
+    },
+
+    "regulatory_verification": {
+      "type": "array",
+      "description": "Verification of all regulatory instruments cited",
+      "items": {
+        "type": "object",
+        "required": ["instrument_name", "cited_status", "verified_status", "verification_date"],
+        "properties": {
+          "instrument_name": { "type": "string" },
+          "cited_status": { "$ref": "enums.schema.json#/definitions/regulatory_status" },
+          "verified_status": { "$ref": "enums.schema.json#/definitions/regulatory_status" },
+          "verification_date": { "$ref": "enums.schema.json#/definitions/iso8601_date" },
+          "verification_source": { "type": "string" },
+          "discrepancy": { 
+            "type": "boolean",
+            "description": "True if cited status differs from verified status"
+          },
+          "notes": { "type": "string" }
+        }
+      }
+    },
+
+    "criteria_assessment": {
+      "type": "object",
+      "description": "Assessment against each adversarial criterion",
+      "properties": {
+        "factual_accuracy": {
+          "type": "object",
+          "properties": {
+            "passed": { "type": "boolean" },
+            "issues_found": { "type": "integer" },
+            "notes": { "type": "string" }
+          }
+        },
+        "regulatory_precision": {
+          "type": "object",
+          "properties": {
+            "passed": { "type": "boolean" },
+            "issues_found": { "type": "integer" },
+            "notes": { "type": "string" }
+          }
+        },
+        "evidential_basis_for_ratings": {
+          "type": "object",
+          "properties": {
+            "passed": { "type": "boolean" },
+            "issues_found": { "type": "integer" },
+            "notes": { "type": "string" }
+          }
+        },
+        "control_assessment_rigour": {
+          "type": "object",
+          "properties": {
+            "passed": { "type": "boolean" },
+            "issues_found": { "type": "integer" },
+            "notes": { "type": "string" }
+          }
+        },
+        "scope_discipline": {
+          "type": "object",
+          "properties": {
+            "passed": { "type": "boolean" },
+            "issues_found": { "type": "integer" },
+            "notes": { "type": "string" }
+          }
+        },
+        "actionability_of_mitigations": {
+          "type": "object",
+          "properties": {
+            "passed": { "type": "boolean" },
+            "issues_found": { "type": "integer" },
+            "notes": { "type": "string" }
+          }
+        },
+        "completeness_of_evidences": {
+          "type": "object",
+          "properties": {
+            "passed": { "type": "boolean" },
+            "issues_found": { "type": "integer" },
+            "notes": { "type": "string" }
+          }
+        },
+        "logical_coherence": {
+          "type": "object",
+          "properties": {
+            "passed": { "type": "boolean" },
+            "issues_found": { "type": "integer" },
+            "notes": { "type": "string" }
+          }
+        }
+      }
+    },
+
+    "summary": {
+      "type": "object",
+      "required": ["total_challenges", "critical_count", "major_count", "minor_count", "overall_assessment"],
+      "properties": {
+        "total_challenges": { "type": "integer", "minimum": 0 },
+        "critical_count": { "type": "integer", "minimum": 0 },
+        "major_count": { "type": "integer", "minimum": 0 },
+        "minor_count": { "type": "integer", "minimum": 0 },
+        "criteria_passed": { "type": "integer", "minimum": 0, "maximum": 8 },
+        "criteria_failed": { "type": "integer", "minimum": 0, "maximum": 8 },
+        "overall_assessment": {
+          "type": "string",
+          "enum": ["acceptable", "requires_minor_revision", "requires_major_revision", "fundamentally_flawed"]
+        },
+        "key_issues": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Top issues to address in rectification"
+        }
+      }
+    }
+  }
+}

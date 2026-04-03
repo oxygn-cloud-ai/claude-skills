@@ -1,0 +1,289 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "assessment.schema.json",
+  "title": "Risk Assessment",
+  "description": "Structured risk assessment. Used for all iterations: draft (1), rectified (2), final (3).",
+
+  "type": "object",
+  "required": ["metadata", "sections"],
+  "additionalProperties": false,
+
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "required": ["ticket_key", "assessment_date", "iteration", "status"],
+      "properties": {
+        "ticket_key": { "$ref": "enums.schema.json#/definitions/ticket_key" },
+        "assessment_date": { "$ref": "enums.schema.json#/definitions/iso8601_date" },
+        "iteration": { "$ref": "enums.schema.json#/definitions/assessment_iteration" },
+        "status": { "$ref": "enums.schema.json#/definitions/assessment_status" },
+        "previous_iteration_ref": { 
+          "type": ["string", "null"],
+          "description": "Filename of the previous iteration, if any"
+        },
+        "assessor": { "type": "string", "const": "Claude (Anthropic)" }
+      }
+    },
+
+    "sections": {
+      "type": "object",
+      "required": [
+        "header",
+        "context",
+        "regulatory_framework",
+        "inherent_risk",
+        "existing_controls",
+        "residual_risk",
+        "recommendations",
+        "evidences"
+      ],
+      "properties": {
+
+        "header": {
+          "type": "object",
+          "required": ["risk_id", "risk_name", "risk_statement", "risk_category"],
+          "properties": {
+            "risk_id": { "$ref": "enums.schema.json#/definitions/ticket_key" },
+            "risk_name": { "type": "string", "minLength": 1 },
+            "risk_statement": { "type": "string", "minLength": 1 },
+            "risk_category": { "$ref": "enums.schema.json#/definitions/risk_category" },
+            "risk_category_name": { "type": "string" }
+          }
+        },
+
+        "context": {
+          "type": "object",
+          "required": ["narrative", "business_relevance", "materiality_rationale"],
+          "properties": {
+            "narrative": { 
+              "type": "string", 
+              "minLength": 100,
+              "description": "Factual narrative setting out relevance to Chocolate Finance"
+            },
+            "business_relevance": {
+              "type": "array",
+              "items": { "type": "string" },
+              "minItems": 1,
+              "description": "Specific aspects: business model, licence, jurisdictions, scale"
+            },
+            "recent_events": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Relevant recent events (e.g., miles incident, expansion milestones)"
+            },
+            "materiality_rationale": {
+              "type": "string",
+              "minLength": 50,
+              "description": "Why this risk is material at the firm's current stage"
+            }
+          }
+        },
+
+        "regulatory_framework": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["instrument_name", "jurisdiction", "relevance"],
+            "properties": {
+              "instrument_name": { "type": "string", "minLength": 1 },
+              "instrument_code": { "type": "string" },
+              "jurisdiction": { "$ref": "enums.schema.json#/definitions/jurisdiction" },
+              "version_date": { "type": "string" },
+              "status": { "$ref": "enums.schema.json#/definitions/regulatory_status" },
+              "relevance": { 
+                "type": "string", 
+                "minLength": 20,
+                "description": "One-sentence statement of direct relevance to this risk"
+              },
+              "url": { "type": "string", "format": "uri" },
+              "verified_date": { "$ref": "enums.schema.json#/definitions/iso8601_date" }
+            }
+          }
+        },
+
+        "inherent_risk": {
+          "type": "object",
+          "required": ["likelihood", "impact", "rating", "likelihood_rationale", "impact_rationale"],
+          "properties": {
+            "likelihood": { "$ref": "enums.schema.json#/definitions/likelihood" },
+            "likelihood_rationale": { 
+              "type": "string", 
+              "minLength": 50,
+              "description": "Substantive justification grounded in firm's circumstances"
+            },
+            "impact": { "$ref": "enums.schema.json#/definitions/impact" },
+            "impact_rationale": { 
+              "type": "string", 
+              "minLength": 50,
+              "description": "Concrete consequences: regulatory, financial, reputational, operational"
+            },
+            "rating": { "$ref": "enums.schema.json#/definitions/risk_rating" }
+          }
+        },
+
+        "existing_controls": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "description", "control_type", "effectiveness"],
+            "properties": {
+              "id": { 
+                "type": "string", 
+                "pattern": "^C\\d{3}$",
+                "description": "Control ID in format C001, C002, etc."
+              },
+              "description": { "type": "string", "minLength": 10 },
+              "control_type": { "$ref": "enums.schema.json#/definitions/control_type" },
+              "effectiveness": { "$ref": "enums.schema.json#/definitions/control_effectiveness" },
+              "effectiveness_rationale": { "type": "string" },
+              "source": {
+                "type": "string",
+                "enum": ["mitigation_ticket", "regulatory_obligation", "disclosed_practice", "inferred"],
+                "description": "How this control was identified"
+              },
+              "source_reference": { "type": "string" },
+              "gaps": { 
+                "type": "array", 
+                "items": { "type": "string" },
+                "description": "Identified gaps or limitations"
+              },
+              "requires_verification": { 
+                "type": "boolean",
+                "description": "True if existence/effectiveness not confirmed"
+              }
+            }
+          }
+        },
+
+        "residual_risk": {
+          "type": "object",
+          "required": ["likelihood", "impact", "rating", "likelihood_rationale", "impact_rationale"],
+          "properties": {
+            "likelihood": { "$ref": "enums.schema.json#/definitions/likelihood" },
+            "likelihood_rationale": { "type": "string", "minLength": 50 },
+            "impact": { "$ref": "enums.schema.json#/definitions/impact" },
+            "impact_rationale": { 
+              "type": "string", 
+              "minLength": 20,
+              "description": "Note: impact typically does not reduce through controls"
+            },
+            "rating": { "$ref": "enums.schema.json#/definitions/risk_rating" },
+            "control_effect_summary": {
+              "type": "string",
+              "description": "How controls reduced likelihood from inherent level"
+            }
+          }
+        },
+
+        "recommendations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "action", "priority", "regulatory_basis"],
+            "properties": {
+              "id": { 
+                "type": "string", 
+                "pattern": "^R\\d{3}$",
+                "description": "Recommendation ID in format R001, R002, etc."
+              },
+              "action": { 
+                "type": "string", 
+                "minLength": 20,
+                "description": "Specific, actionable recommendation"
+              },
+              "priority": {
+                "type": "string",
+                "enum": ["Critical", "High", "Medium", "Low"]
+              },
+              "regulatory_basis": { 
+                "type": "string",
+                "description": "Which regulatory instrument grounds this recommendation"
+              },
+              "suggested_owner": { "$ref": "enums.schema.json#/definitions/suggested_owner" },
+              "suggested_deadline": { "type": "string" },
+              "expected_outcome": { "type": "string" }
+            }
+          }
+        },
+
+        "evidences": {
+          "type": "object",
+          "required": ["sources_used", "sources_unavailable", "caveats"],
+          "properties": {
+            "sources_used": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["source_type", "description"],
+                "properties": {
+                  "source_type": {
+                    "type": "string",
+                    "enum": ["jira_register", "web_search", "user_provided", "regulatory_publication", "company_disclosure", "skill_context"]
+                  },
+                  "description": { "type": "string" },
+                  "url": { 
+                    "type": "string", 
+                    "format": "uri",
+                    "pattern": "^https?://",
+                    "description": "REQUIRED for web_search and regulatory_publication. Must be fully qualified URL (https://...)"
+                  },
+                  "retrieved_date": { "$ref": "enums.schema.json#/definitions/iso8601_date" }
+                },
+                "allOf": [
+                  {
+                    "if": { "properties": { "source_type": { "const": "web_search" } } },
+                    "then": { "required": ["url"] }
+                  },
+                  {
+                    "if": { "properties": { "source_type": { "const": "regulatory_publication" } } },
+                    "then": { "required": ["url"] }
+                  }
+                ]
+              }
+            },
+            "sources_unavailable": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Information that was not available for this assessment"
+            },
+            "caveats": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Reliability limitations and assumptions made"
+            }
+          }
+        }
+      }
+    },
+
+    "changes_from_previous": {
+      "type": "object",
+      "description": "Only present for iterations 2 and 3",
+      "properties": {
+        "summary": { "type": "string" },
+        "changes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["section", "change_type", "description"],
+            "properties": {
+              "section": { "type": "string" },
+              "change_type": {
+                "type": "string",
+                "enum": ["corrected", "expanded", "removed", "rating_changed", "retained_with_justification"]
+              },
+              "previous_value": { "type": "string" },
+              "new_value": { "type": "string" },
+              "description": { "type": "string" },
+              "triggered_by": {
+                "type": "string",
+                "enum": ["adversarial_review", "user_input", "new_evidence"]
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

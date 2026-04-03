@@ -33,6 +33,7 @@ Slash-command skills installed via the root `./install.sh` into `~/.claude/skill
 |-------|---------|-------------|
 | **chk1** | `/chk1` | Adversarial implementation audit — fault-finding, risk-exposing, deviation-detecting review of recent changes |
 | **chk2** | `/chk2` | Adversarial security audit for web services — headers, TLS, DNS, CORS, API injection, WebSocket, WAF, infrastructure, brute force, scaling, and info disclosure |
+| **rr** | `/rr` | Risk register assessment for Chocolate Finance — interactive 6-step workflow or autonomous batch mode with parallel sub-agents. [Full documentation](RR-README.md) |
 
 ### Standalone Tools
 
@@ -85,6 +86,10 @@ for f in all quick headers tls dns cors api ws waf infra brute scale disclosure 
          proxy business backend; do
   curl -sL "$REPO/skills/chk2/commands/${f}.md" -o ~/.claude/commands/chk2/${f}.md
 done
+
+# rr — risk register assessment (requires per-skill installer due to orchestrator + references)
+git clone https://github.com/oxygn-cloud-ai/claude-skills.git
+cd claude-skills/skills/rr && ./install.sh
 ```
 
 ### Verify installation
@@ -206,6 +211,13 @@ claude-skills/
       SKILL.md
       README.md
       install.sh
+    rr/                <- Risk register assessment (requires per-skill installer)
+      SKILL.md
+      README.md
+      install.sh
+      commands/        <- Sub-command files
+      orchestrator/    <- Batch mode shell scripts
+      references/      <- Schemas, workflow, business context
     iterm2-tmux/       <- Standalone tool (own installer, no SKILL.md)
       install.sh
       uninstall.sh

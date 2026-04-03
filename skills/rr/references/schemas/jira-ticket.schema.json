@@ -1,0 +1,132 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "jira-ticket.schema.json",
+  "title": "Jira Review Ticket",
+  "description": "Structure for creating or updating a Review child ticket in Jira. Produced in Step 6.",
+
+  "type": "object",
+  "required": ["ticket_metadata", "jira_fields", "rendered_description"],
+  "additionalProperties": false,
+
+  "properties": {
+    "ticket_metadata": {
+      "type": "object",
+      "required": ["parent_key", "operation", "review_date"],
+      "properties": {
+        "parent_key": { "$ref": "enums.schema.json#/definitions/ticket_key" },
+        "existing_ticket_key": { 
+          "$ref": "enums.schema.json#/definitions/ticket_key",
+          "description": "Present only if updating an existing same-day review"
+        },
+        "operation": {
+          "type": "string",
+          "enum": ["create", "update"]
+        },
+        "review_date": { "$ref": "enums.schema.json#/definitions/iso8601_date" },
+        "cloud_id": { "type": "string", "const": "81a55da4-28c8-4a49-8a47-03a98a73f152" },
+        "project_key": { "type": "string", "const": "RR" },
+        "issue_type_name": { "type": "string", "const": "Review" },
+        "issue_type_id": { "type": "string", "const": "12686" }
+      }
+    },
+
+    "jira_fields": {
+      "type": "object",
+      "required": ["summary", "assignee_account_id", "duedate", "customfield_10015", "labels"],
+      "properties": {
+        "summary": { 
+          "type": "string",
+          "pattern": "^Review: \\d{4}, [A-Z][a-z]{2} \\d{2}$",
+          "description": "Format: Review: YYYY, Mmm DD"
+        },
+        "parent": { "$ref": "enums.schema.json#/definitions/ticket_key" },
+        "assignee_account_id": {
+          "type": "string",
+          "const": "712020:fd08a63d-8c2c-4412-8761-834339d9475c",
+          "description": "James Shanahan's Atlassian account ID"
+        },
+        "duedate": {
+          "$ref": "enums.schema.json#/definitions/iso8601_date",
+          "description": "Assessment date (due date)"
+        },
+        "customfield_10015": {
+          "$ref": "enums.schema.json#/definitions/iso8601_date",
+          "description": "Assessment date (start date)"
+        },
+        "labels": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["Q1-Risk-Review", "Q2-Risk-Review", "Q3-Risk-Review", "Q4-Risk-Review"]
+          },
+          "minItems": 1,
+          "maxItems": 1,
+          "description": "Quarterly label based on assessment month"
+        }
+      }
+    },
+
+    "rendered_description": {
+      "type": "string",
+      "minLength": 500,
+      "description": "Full markdown render of the final assessment for the Jira description field"
+    },
+
+    "assessment_summary": {
+      "type": "object",
+      "description": "Extracted key data for quick reference",
+      "required": ["inherent_risk", "residual_risk", "recommendations_count"],
+      "properties": {
+        "risk_id": { "$ref": "enums.schema.json#/definitions/ticket_key" },
+        "risk_name": { "type": "string" },
+        "risk_category": { "$ref": "enums.schema.json#/definitions/risk_category" },
+        "inherent_risk": {
+          "type": "object",
+          "required": ["likelihood", "impact", "rating"],
+          "properties": {
+            "likelihood": { "$ref": "enums.schema.json#/definitions/likelihood" },
+            "impact": { "$ref": "enums.schema.json#/definitions/impact" },
+            "rating": { "$ref": "enums.schema.json#/definitions/risk_rating" }
+          }
+        },
+        "residual_risk": {
+          "type": "object",
+          "required": ["likelihood", "impact", "rating"],
+          "properties": {
+            "likelihood": { "$ref": "enums.schema.json#/definitions/likelihood" },
+            "impact": { "$ref": "enums.schema.json#/definitions/impact" },
+            "rating": { "$ref": "enums.schema.json#/definitions/risk_rating" }
+          }
+        },
+        "controls_count": { "type": "integer", "minimum": 0 },
+        "recommendations_count": { "type": "integer", "minimum": 0 },
+        "critical_recommendations": { "type": "integer", "minimum": 0 },
+        "key_findings": {
+          "type": "array",
+          "items": { "type": "string" },
+          "maxItems": 5
+        },
+        "evidences_summary": { "type": "string" }
+      }
+    },
+
+    "attachments": {
+      "type": "array",
+      "description": "Files to attach to the ticket",
+      "items": {
+        "type": "object",
+        "required": ["filename", "step"],
+        "properties": {
+          "filename": { "type": "string" },
+          "step": { "type": "string" },
+          "file_path": { "type": "string" },
+          "attached": { "type": "boolean" },
+          "attachment_method": {
+            "type": "string",
+            "enum": ["curl_api", "mcp_tool", "manual_required"]
+          }
+        }
+      }
+    }
+  }
+}

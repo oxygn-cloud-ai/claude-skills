@@ -1,0 +1,197 @@
+# rr — Risk Register Assessment
+
+A Claude Code CLI skill for structured risk assessment of Chocolate Finance's Jira risk register (project RR). Single-risk interactive mode or fully autonomous batch mode with parallel sub-agents.
+
+## Prerequisites
+
+- [Claude Code](https://claude.ai/claude-code) installed
+- Atlassian MCP integration connected with access to the RR project
+- For batch mode: `curl`, `jq`, and environment variables (see below)
+
+## Installation
+
+**Important:** Use the per-skill installer. The root `./install.sh rr` only copies SKILL.md and will produce a broken install.
+
+```bash
+cd skills/rr && ./install.sh
+```
+
+### Verify
+
+```bash
+./install.sh --check
+```
+
+Or in Claude Code:
+
+```
+/rr doctor
+```
+
+### Uninstall
+
+```bash
+cd skills/rr && ./install.sh --uninstall
+```
+
+## Usage
+
+```
+/rr RR-220              Review a specific risk (interactive 6-step workflow)
+/rr all                 Batch review all risks (parallel sub-agents)
+/rr all --force         Batch all risks, ignore quarterly filter
+/rr all T               Batch Technology risks only
+/rr all --reset         Clear batch work directory
+/rr status              Check batch progress
+/rr fix                 Re-run failed assessments
+/rr update              Update to latest version
+/rr doctor              Environment health check
+/rr help                Usage guide
+/rr version             Show version
+```
+
+Natural language also works:
+
+```
+Review RR-220
+Assess all technology risks
+Do a risk review of RR-315
+```
+
+## How It Works
+
+### Single Risk Mode (`/rr RR-220`)
+
+Interactive 6-step workflow:
+
+1. **Extract & Draft** — Retrieve risk from Jira, draft initial assessment
+2. **Adversarial Review** — Challenge the draft against 8 criteria, verify regulatory citations
+3. **Rectified Assessment** — Address every challenge, correct or justify
+4. **Discussion** — Resolve uncertainties with the user interactively
+5. **Final Assessment** — Incorporate discussion outcomes (user confirms before publishing)
+6. **Publish to Jira** — Create Review child ticket with full assessment
+
+### Batch Mode (`/rr all`)
+
+Fully autonomous parallel processing:
+
+| Phase | Duration | Action |
+|-------|----------|--------|
+| 1 | ~30s | Query Jira for all risks |
+| 2 | ~10s | Filter out quarterly-reviewed |
+| 3 | ~30s | Chunk into batches of 10 |
+| 4 | ~15min | Dispatch 20 sub-agents in parallel |
+| 5 | ~2min | Collect and validate results |
+| 6 | ~10min | Create Review tickets in Jira |
+| 7 | ~5s | Slack notification |
+
+**Total: ~30 minutes for 200 risks**
+
+Requires `ANTHROPIC_API_KEY`, `JIRA_EMAIL`, and `JIRA_API_TOKEN`. Falls back to sequential mode if these are not set.
+
+## Environment Variables
+
+| Variable | Default | Required For |
+|----------|---------|-------------|
+| `RR_OUTPUT_DIR` | `~/rr-output` | All modes |
+| `RR_WORK_DIR` | `~/rr-work` | Batch mode |
+| `ANTHROPIC_API_KEY` | — | Batch parallel mode |
+| `JIRA_EMAIL` | — | Batch mode Jira API |
+| `JIRA_API_TOKEN` | — | Batch mode Jira API |
+| `SLACK_WEBHOOK_URL` | — | Optional: completion notification |
+| `RR_MODEL` | `claude-sonnet-4-20250514` | Optional: override sub-agent model |
+| `ANTHROPIC_API_VERSION` | `2023-06-01` | Optional: override API version |
+
+## Output Files
+
+Each completed review produces 7 JSON files in `$RR_OUTPUT_DIR` (default: `~/rr-output/`):
+
+| File | Step |
+|------|------|
+| `<key>_export.json` | 1 — Jira data export |
+| `<key>_<date>_assessment_1.json` | 1 — Draft assessment |
+| `<key>_<date>_adversarial_review.json` | 2 — Challenges |
+| `<key>_<date>_assessment_2.json` | 3 — Rectified assessment |
+| `<key>_<date>_discussion.json` | 4 — Discussion log |
+| `<key>_<date>_assessment_final.json` | 5 — Final assessment |
+| `<key>_<date>_jira_ticket.json` | 6 — Jira ticket record |
+
+## File Structure
+
+```
+~/.claude/skills/rr/
+  SKILL.md                           Main skill definition
+  .source-repo                       Repo path (for /rr update)
+  orchestrator/
+    rr-batch.sh                      Main batch orchestrator
+    dispatch.sh                      Parallel sub-agent dispatch
+    collect.sh                       Result collection/validation
+    retry.sh                         Failed batch retry
+    publish.sh                       Jira publication manifest
+    _dispatch_one.sh                 Per-batch dispatch wrapper
+    _publish_one.sh                  Per-risk publish wrapper
+    sub-agent-system-prompt.txt      Sub-agent system prompt
+  references/
+    business-context.md              Chocolate Finance facts
+    jira-config.md                   Jira API config
+    quality-standards.md             Validation rules
+    regulatory-framework.md          MAS/SFC instruments
+    schemas/                         6 JSON schema files
+    workflow/                        6 step definition files
+
+~/.claude/commands/rr/
+  review.md                          Single-risk workflow
+  all.md                             Batch mode
+  status.md                          Progress checker
+  fix.md                             Retry helper
+
+~/.claude/commands/rr.md             Router file
+```
+
+## Risk Categories
+
+| Prefix | Category |
+|--------|----------|
+| A | Audit |
+| B | Business Continuity Management |
+| C | Compliance |
+| D | Product / Design |
+| ER | Expansion Risk |
+| F | Financial |
+| I | Investment |
+| L | Legal |
+| O | Operational |
+| OO | Other Operational |
+| P | People |
+| T | Technology |
+
+## Troubleshooting
+
+| Problem | Fix |
+|---------|-----|
+| `/rr doctor` fails | Run `cd skills/rr && ./install.sh --force` |
+| Jira tools not available | Connect Atlassian MCP integration in Claude Code |
+| "Project RR not found" | Verify Atlassian account has RR project access |
+| Batch mode not launching | Check `ANTHROPIC_API_KEY`, `JIRA_EMAIL`, `JIRA_API_TOKEN` are set |
+| jq not found | `brew install jq` |
+| Batch progress lost | Check `~/rr-work/progress.md` or `~/rr-output/rr-progress.md` |
+
+## Update
+
+```bash
+cd claude-skills && git pull && cd skills/rr && ./install.sh --force
+```
+
+Or from within Claude Code:
+
+```
+/rr update
+```
+
+## Version
+
+Current: **2.0.0**
+
+## Licence
+
+MIT
