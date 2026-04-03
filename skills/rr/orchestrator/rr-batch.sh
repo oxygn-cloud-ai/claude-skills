@@ -67,12 +67,13 @@ done
 # SETUP
 #=============================================================================
 
-mkdir -p "$WORK_DIR"/{extracts,payloads,results,errors,assessments,individual,jira-payloads,jira-results,jira-errors,logs}
+mkdir -p "$WORK_DIR"/{extracts,payloads,results,errors,assessments,individual,jira-payloads,jira-results,jira-errors,progress,logs}
 : > "$LOG_FILE"
 
-# Clean stale results/errors from previous runs at startup
+# Clean stale results/errors/progress from previous runs at startup
 rm -f "$WORK_DIR/jira-results"/*.json 2>/dev/null
 rm -f "$WORK_DIR/jira-errors"/*.json 2>/dev/null
+rm -f "$WORK_DIR/progress"/*.json 2>/dev/null
 
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG_FILE" >&2
@@ -336,15 +337,20 @@ create_payload() {
     local batch_id=$(jq '.batch_id' "$batch_file")
     local risks=$(jq -c '.risks' "$batch_file")
 
+    # Tool definition for per-risk progress reporting
+    local tools='[{"name":"report_progress","description":"Report completion of a single risk assessment. Call after completing each risk.","input_schema":{"type":"object","properties":{"risk_key":{"type":"string","description":"Risk ticket key, e.g. RR-220"},"status":{"type":"string","enum":["success","error"],"description":"Whether assessment succeeded or failed"},"risk_name":{"type":"string","description":"Short name of the risk"},"inherent_rating":{"type":"string","enum":["Low","Medium","High","Critical"],"description":"Inherent risk rating"},"residual_rating":{"type":"string","enum":["Low","Medium","High","Critical"],"description":"Residual risk rating"},"error_message":{"type":"string","description":"Error description if status is error"}},"required":["risk_key","status"]}}]'
+
     local payload=$(jq -n \
         --arg model "$MODEL" \
         --argjson max_tokens 20000 \
         --arg system "$SUBAGENT_PROMPT" \
         --arg user "Assess these risks and return JSON only: $risks" \
+        --argjson tools "$tools" \
         '{
             model: $model,
             max_tokens: $max_tokens,
             system: $system,
+            tools: $tools,
             messages: [{role: "user", content: $user}]
         }')
 
@@ -394,7 +400,8 @@ phase_collection() {
         [ -f "$result_file" ] || continue
 
         local batch_id=$(basename "$result_file" | sed 's/result_//;s/\.json//')
-        local content=$(jq -r '.content[0].text // empty' "$result_file" 2>/dev/null \
+        # Extract text content (handles both tool-use and non-tool-use responses)
+        local content=$(jq -r '[.content[] | select(.type == "text")] | .[0].text // empty' "$result_file" 2>/dev/null \
             | sed 's/^```json[[:space:]]*//' | sed 's/^```[[:space:]]*//' | sed 's/[[:space:]]*```$//')
 
         if [ -z "$content" ] || ! echo "$content" | jq -e '.assessments' >/dev/null 2>&1; then

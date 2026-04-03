@@ -267,6 +267,30 @@ body::before {
 .log-line.dim { color: var(--text-muted); }
 .log-line.banner { color: var(--cyan); font-weight: 600; }
 
+/* Live progress feed */
+.progress-feed { max-height: 300px; overflow-y: auto; }
+.progress-item {
+  display: grid; grid-template-columns: 80px 1fr 70px 70px 60px;
+  gap: 8px; align-items: center;
+  padding: 6px 0; border-bottom: 1px solid rgba(42, 54, 80, 0.3);
+  font-family: var(--font-mono); font-size: 11px;
+  animation: fadeIn 0.4s ease-out;
+}
+.progress-item:last-child { border-bottom: none; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+.progress-key { color: var(--text-primary); font-weight: 600; }
+.progress-name { color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rating-badge {
+  display: inline-block; padding: 1px 6px; border-radius: 3px;
+  font-size: 10px; font-weight: 600; text-align: center;
+}
+.rating-badge.Critical { background: var(--red-glow); color: var(--red); }
+.rating-badge.High { background: rgba(251, 191, 36, 0.15); color: var(--amber); }
+.rating-badge.Medium { background: var(--cyan-glow); color: var(--cyan); }
+.rating-badge.Low { background: var(--green-glow); color: var(--green); }
+.progress-batch { color: var(--text-muted); text-align: right; }
+.no-progress { color: var(--text-muted); font-family: var(--font-mono); font-size: 12px; padding: 20px 0; text-align: center; }
+
 /* Scrollbar */
 ::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -353,6 +377,17 @@ body::before {
     </div>
     <div class="card-body">
       <div class="error-list" id="errorList"></div>
+    </div>
+  </div>
+
+  <!-- Live Progress Feed -->
+  <div class="card" id="progressCard" style="margin-bottom: 16px; display: none;">
+    <div class="card-header">
+      Live Progress
+      <span class="badge badge-cyan" id="progressBadge">0</span>
+    </div>
+    <div class="card-body" style="padding: 10px 18px;">
+      <div class="progress-feed" id="progressFeed"></div>
     </div>
   </div>
 
@@ -501,6 +536,29 @@ function update(data) {
     `).join('');
   } else {
     errorCard.style.display = 'none';
+  }
+
+  // Live progress feed
+  const progressCard = document.getElementById('progressCard');
+  const progressData = data.progress || [];
+  if (progressData.length > 0) {
+    progressCard.style.display = 'block';
+    document.getElementById('progressBadge').textContent = progressData.length;
+    document.getElementById('progressFeed').innerHTML = progressData.map(p => {
+      const ir = p.inherent_rating || '—';
+      const rr = p.residual_rating || '—';
+      const name = (p.risk_name || '').substring(0, 60);
+      const batch = p.batch_id != null ? `B${p.batch_id}` : '';
+      return `<div class="progress-item">
+        <span class="progress-key">${p.risk_key}</span>
+        <span class="progress-name" title="${(p.risk_name || '').replace(/"/g, '&quot;')}">${name}</span>
+        <span class="rating-badge ${ir}">${ir}</span>
+        <span class="rating-badge ${rr}">${rr}</span>
+        <span class="progress-batch">${batch}</span>
+      </div>`;
+    }).join('');
+  } else {
+    progressCard.style.display = 'none';
   }
 
   // Log stream

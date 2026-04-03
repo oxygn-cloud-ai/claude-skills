@@ -183,6 +183,20 @@ def build_risk_status():
     return {"counts": counts, "total": len(all_keys), "risks": risks}
 
 
+def build_live_progress():
+    """Read per-risk progress files from sub-agent tool-use reports."""
+    progress_dir = WORK_DIR / "progress"
+    if not progress_dir.exists():
+        return []
+    results = []
+    for f in sorted(progress_dir.iterdir(), key=lambda p: p.stat().st_mtime, reverse=True):
+        if f.suffix == ".json":
+            data = read_json_safe(f)
+            if data:
+                results.append(data)
+    return results
+
+
 def build_api_response():
     total_risks = 0
     to_process = 0
@@ -210,6 +224,7 @@ def build_api_response():
         "start_time": start,
         "batches": build_batch_status(),
         "risks": build_risk_status(),
+        "progress": build_live_progress(),
         "log": get_log_tail(50),
         "counts": {
             "extracts": count_files("extracts"),

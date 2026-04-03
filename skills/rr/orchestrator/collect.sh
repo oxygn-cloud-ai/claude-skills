@@ -36,7 +36,8 @@ for result_file in "$RESULTS_DIR"/result_*.json; do
     log "Processing batch $batch_id"
 
     # Extract text content from API response
-    content=$(jq -r '.content[0].text // empty' "$result_file" 2>/dev/null \
+    # Extract text content (handles both tool-use and non-tool-use responses)
+    content=$(jq -r '[.content[] | select(.type == "text")] | .[0].text // empty' "$result_file" 2>/dev/null \
         | sed 's/^```json[[:space:]]*//' | sed 's/^```[[:space:]]*//' | sed 's/[[:space:]]*```$//')
 
     if [ -z "$content" ]; then

@@ -1,8 +1,8 @@
 #!/bin/bash
-# _dispatch_one.sh — Standalone wrapper for dispatching a single sub-agent batch
+# _dispatch_one.sh — Dispatch a single sub-agent batch with tool-use progress reporting
 #
-# Replaces the export -f dispatch_subagent pattern for macOS compatibility.
-# Called by rr-batch.sh and dispatch.sh via xargs -P.
+# Implements a tool-use loop: the sub-agent calls report_progress after each risk,
+# we write a progress file and send tool_result back. Loop until end_turn.
 #
 # Usage: _dispatch_one.sh <batch_id>
 #
@@ -15,9 +15,6 @@
 #   ANTHROPIC_API_VERSION — API version (default: 2023-06-01)
 #   SUBAGENT_TIMEOUT     — Initial timeout in seconds (default: 300)
 #   SUBAGENT_MAX_RETRIES — Max retry attempts (default: 3)
-#   MAX_RETRIES          — Alternative to SUBAGENT_MAX_RETRIES (for dispatch.sh compat)
-#   INITIAL_TIMEOUT      — Alternative to SUBAGENT_TIMEOUT (for dispatch.sh compat)
-#   RATE_LIMIT_BACKOFF   — Base backoff for rate limits (default: 30)
 
 set -uo pipefail
 
@@ -33,15 +30,21 @@ TIMEOUT="${SUBAGENT_TIMEOUT:-${INITIAL_TIMEOUT:-300}}"
 MAX_RETRIES="${SUBAGENT_MAX_RETRIES:-${MAX_RETRIES:-3}}"
 RATE_LIMIT_BACKOFF="${RATE_LIMIT_BACKOFF:-30}"
 
+# Tool-use loop settings
+MAX_TOOL_ITERATIONS=15
+LOOP_TIMEOUT=900
+CONTINUATION_TIMEOUT=120
+
 # File paths
 payload_file="$WORK_DIR/payloads/payload_${batch_id}.json"
 result_file="$WORK_DIR/results/result_${batch_id}.json"
 error_file="$WORK_DIR/errors/error_${batch_id}.json"
 log_file="$WORK_DIR/logs/dispatch_${batch_id}.log"
+progress_dir="$WORK_DIR/progress"
 retry_queue="$WORK_DIR/retry-queue.txt"
 
 # Ensure directories exist
-mkdir -p "$WORK_DIR/results" "$WORK_DIR/errors" "$WORK_DIR/logs"
+mkdir -p "$WORK_DIR/results" "$WORK_DIR/errors" "$WORK_DIR/logs" "$progress_dir"
 
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "$log_file"
@@ -55,123 +58,210 @@ if [ ! -f "$payload_file" ]; then
     exit 1
 fi
 
-attempt=0
-timeout=$TIMEOUT
+#=============================================================================
+# API CALL WITH RETRY
+#=============================================================================
 
-while [ $attempt -lt $MAX_RETRIES ]; do
-    attempt=$((attempt + 1))
-    log "BATCH_${batch_id}:ATTEMPT_${attempt}:TIMEOUT_${timeout}s"
+api_call() {
+    local payload="$1"
+    local timeout="$2"
+    local attempt=0
 
-    # Make API call
-    http_response=$(curl -s -w "\n%{http_code}" \
-        -X POST "https://api.anthropic.com/v1/messages" \
-        -H "Content-Type: application/json" \
-        -H "x-api-key: $ANTHROPIC_API_KEY" \
-        -H "anthropic-version: $API_VERSION" \
-        -d @"$payload_file" \
-        --max-time "$timeout" \
-        2>&1)
+    while [ $attempt -lt $MAX_RETRIES ]; do
+        attempt=$((attempt + 1))
 
-    curl_exit=$?
+        http_response=$(curl -s -w "\n%{http_code}" \
+            -X POST "https://api.anthropic.com/v1/messages" \
+            -H "Content-Type: application/json" \
+            -H "x-api-key: $ANTHROPIC_API_KEY" \
+            -H "anthropic-version: $API_VERSION" \
+            -d @"$payload" \
+            --max-time "$timeout" \
+            2>&1)
 
-    # Extract HTTP code (last line) and body (everything else)
-    # tr -d '\r' fixes CRLF from curl on some platforms
-    http_code=$(echo "$http_response" | tail -n1 | tr -d '\r')
-    http_body=$(echo "$http_response" | sed '$d')
+        curl_exit=$?
+        http_code=$(echo "$http_response" | tail -n1 | tr -d '\r')
+        http_body=$(echo "$http_response" | sed '$d')
 
-    # Handle curl errors
-    if [ $curl_exit -ne 0 ]; then
-        if [ $curl_exit -eq 28 ]; then
-            # Timeout
-            if [ $attempt -lt $MAX_RETRIES ]; then
+        # Handle curl errors
+        if [ $curl_exit -ne 0 ]; then
+            if [ $curl_exit -eq 28 ] && [ $attempt -lt $MAX_RETRIES ]; then
                 timeout=$((timeout + 120))
                 log "BATCH_${batch_id}:TIMEOUT:RETRY_${attempt}:NEW_TIMEOUT_${timeout}s"
                 sleep 5
                 continue
-            else
-                log "BATCH_${batch_id}:FAILED:TIMEOUT_AFTER_RETRIES"
-                echo "{\"batch_id\": $batch_id, \"status\": \"error\", \"error\": \"timeout_after_retries\", \"attempts\": $attempt}" > "$error_file"
-                echo "BATCH_${batch_id}:FAILED:TIMEOUT"
-                exit 1
             fi
-        else
-            log "BATCH_${batch_id}:FAILED:CURL_ERROR_${curl_exit}"
-            echo "{\"batch_id\": $batch_id, \"status\": \"error\", \"error\": \"curl_error_$curl_exit\", \"attempts\": $attempt}" > "$error_file"
-            echo "BATCH_${batch_id}:FAILED:CURL_ERROR_$curl_exit"
-            exit 1
+            echo "CURL_ERROR:$curl_exit"
+            return 1
         fi
+
+        case "$http_code" in
+            200)
+                echo "$http_body"
+                return 0
+                ;;
+            429)
+                if [ $attempt -lt $MAX_RETRIES ]; then
+                    sleep_time=$((RATE_LIMIT_BACKOFF * attempt))
+                    log "BATCH_${batch_id}:RATE_LIMITED:RETRY_${attempt}:SLEEPING_${sleep_time}s"
+                    sleep $sleep_time
+                    continue
+                fi
+                echo "RATE_LIMITED"
+                return 1
+                ;;
+            529|503)
+                if [ $attempt -lt $MAX_RETRIES ]; then
+                    sleep_time=$((15 * attempt))
+                    log "BATCH_${batch_id}:OVERLOADED:RETRY_${attempt}:SLEEPING_${sleep_time}s"
+                    sleep $sleep_time
+                    continue
+                fi
+                echo "OVERLOADED:$http_code"
+                return 1
+                ;;
+            400|401)
+                echo "HTTP_ERROR:$http_code:$http_body"
+                return 1
+                ;;
+            *)
+                if [ $attempt -lt $MAX_RETRIES ]; then
+                    log "BATCH_${batch_id}:HTTP_${http_code}:RETRY_${attempt}"
+                    sleep 5
+                    continue
+                fi
+                echo "HTTP_ERROR:$http_code"
+                return 1
+                ;;
+        esac
+    done
+    echo "MAX_RETRIES"
+    return 1
+}
+
+#=============================================================================
+# TOOL-USE LOOP
+#=============================================================================
+
+current_payload="$payload_file"
+tool_iteration=0
+loop_start=$(date +%s)
+
+log "BATCH_${batch_id}:DISPATCH_START"
+
+while true; do
+    tool_iteration=$((tool_iteration + 1))
+
+    # Guard: max iterations
+    if [ $tool_iteration -gt $MAX_TOOL_ITERATIONS ]; then
+        log "BATCH_${batch_id}:TOOL_LOOP_EXCEEDED:${MAX_TOOL_ITERATIONS}"
+        break
     fi
 
-    # Handle HTTP responses
-    case "$http_code" in
-        200)
-            echo "$http_body" > "$result_file"
-            log "BATCH_${batch_id}:SUCCESS"
-            echo "BATCH_${batch_id}:SUCCESS"
-            exit 0
-            ;;
-        429)
-            # Rate limited
-            if [ $attempt -lt $MAX_RETRIES ]; then
-                sleep_time=$((RATE_LIMIT_BACKOFF * attempt))
-                log "BATCH_${batch_id}:RATE_LIMITED:RETRY_${attempt}:SLEEPING_${sleep_time}s"
-                sleep $sleep_time
-                continue
-            else
-                log "BATCH_${batch_id}:FAILED:RATE_LIMITED"
-                echo "{\"batch_id\": $batch_id, \"status\": \"error\", \"error\": \"rate_limited\", \"attempts\": $attempt}" > "$error_file"
-                echo "$batch_id" >> "$retry_queue" 2>/dev/null || true
-                echo "BATCH_${batch_id}:FAILED:RATE_LIMITED"
-                exit 1
+    # Guard: total loop timeout
+    elapsed=$(( $(date +%s) - loop_start ))
+    if [ $elapsed -gt $LOOP_TIMEOUT ]; then
+        log "BATCH_${batch_id}:LOOP_TIMEOUT:${elapsed}s"
+        break
+    fi
+
+    # Choose timeout: full for first turn, shorter for continuations
+    if [ $tool_iteration -eq 1 ]; then
+        turn_timeout=$TIMEOUT
+    else
+        turn_timeout=$CONTINUATION_TIMEOUT
+    fi
+
+    log "BATCH_${batch_id}:TURN_${tool_iteration}:TIMEOUT_${turn_timeout}s"
+
+    # Make API call
+    response=$(api_call "$current_payload" "$turn_timeout")
+    api_exit=$?
+
+    if [ $api_exit -ne 0 ]; then
+        log "BATCH_${batch_id}:FAILED:${response}"
+        echo "{\"batch_id\": $batch_id, \"status\": \"error\", \"error\": \"$response\", \"turn\": $tool_iteration}" > "$error_file"
+        echo "$batch_id" >> "$retry_queue" 2>/dev/null || true
+        echo "BATCH_${batch_id}:FAILED"
+        exit 1
+    fi
+
+    # Check stop_reason
+    stop_reason=$(echo "$response" | jq -r '.stop_reason')
+
+    if [ "$stop_reason" = "end_turn" ]; then
+        # Final response — store result
+        echo "$response" > "$result_file"
+        log "BATCH_${batch_id}:SUCCESS:TURNS_${tool_iteration}"
+        echo "BATCH_${batch_id}:SUCCESS"
+
+        # Cleanup intermediate turn payloads
+        rm -f "$WORK_DIR/payloads/payload_${batch_id}_turn"*.json 2>/dev/null
+        exit 0
+    fi
+
+    if [ "$stop_reason" = "tool_use" ]; then
+        # Extract and process tool_use blocks
+        tool_results="[]"
+
+        while IFS= read -r tool_block; do
+            [ -z "$tool_block" ] && continue
+
+            tool_id=$(echo "$tool_block" | jq -r '.id')
+            tool_name=$(echo "$tool_block" | jq -r '.name')
+            tool_input=$(echo "$tool_block" | jq -c '.input')
+
+            if [ "$tool_name" = "report_progress" ]; then
+                risk_key=$(echo "$tool_input" | jq -r '.risk_key')
+                risk_status=$(echo "$tool_input" | jq -r '.status')
+
+                log "BATCH_${batch_id}:PROGRESS:${risk_key}:${risk_status}"
+
+                # Write progress file
+                echo "$tool_input" | jq \
+                    --arg ts "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" \
+                    --argjson bid "$batch_id" \
+                    '. + {timestamp: $ts, batch_id: $bid}' \
+                    > "$progress_dir/${risk_key}.json" 2>/dev/null
+
+                # Add tool_result
+                tool_results=$(echo "$tool_results" | jq \
+                    --arg id "$tool_id" \
+                    '. + [{type: "tool_result", tool_use_id: $id, content: "OK"}]')
             fi
-            ;;
-        529|503)
-            # Overloaded
-            if [ $attempt -lt $MAX_RETRIES ]; then
-                sleep_time=$((15 * attempt))
-                log "BATCH_${batch_id}:OVERLOADED:RETRY_${attempt}:SLEEPING_${sleep_time}s"
-                sleep $sleep_time
-                timeout=$((timeout + 60))
-                continue
-            else
-                log "BATCH_${batch_id}:FAILED:OVERLOADED:HTTP_${http_code}"
-                echo "{\"batch_id\": $batch_id, \"status\": \"error\", \"error\": \"overloaded\", \"http_code\": $http_code, \"attempts\": $attempt}" > "$error_file"
-                echo "$batch_id" >> "$retry_queue" 2>/dev/null || true
-                echo "BATCH_${batch_id}:FAILED:OVERLOADED"
-                exit 1
-            fi
-            ;;
-        400)
-            # Bad request - don't retry
-            log "BATCH_${batch_id}:FAILED:BAD_REQUEST"
-            jq -n --argjson id "$batch_id" --arg body "$http_body" '{batch_id: $id, status: "error", error: "bad_request", response: $body}' > "$error_file" 2>/dev/null || \
-                echo "{\"batch_id\": $batch_id, \"status\": \"error\", \"error\": \"bad_request\", \"response\": \"parse_error\"}" > "$error_file"
-            echo "BATCH_${batch_id}:FAILED:BAD_REQUEST"
-            exit 1
-            ;;
-        401)
-            # Auth error - don't retry
-            log "BATCH_${batch_id}:FAILED:AUTH_ERROR"
-            echo "{\"batch_id\": $batch_id, \"status\": \"error\", \"error\": \"authentication_failed\"}" > "$error_file"
-            echo "BATCH_${batch_id}:FAILED:AUTH_ERROR"
-            exit 1
-            ;;
-        *)
-            # Other error
-            if [ $attempt -lt $MAX_RETRIES ]; then
-                log "BATCH_${batch_id}:HTTP_${http_code}:RETRY_${attempt}"
-                sleep 5
-                continue
-            else
-                log "BATCH_${batch_id}:FAILED:HTTP_${http_code}"
-                echo "{\"batch_id\": $batch_id, \"status\": \"error\", \"error\": \"http_error\", \"http_code\": $http_code, \"attempts\": $attempt}" > "$error_file"
-                echo "BATCH_${batch_id}:FAILED:HTTP_${http_code}"
-                exit 1
-            fi
-            ;;
-    esac
+        done < <(echo "$response" | jq -c '.content[] | select(.type == "tool_use")')
+
+        # Build next payload: append assistant message + tool_results
+        assistant_content=$(echo "$response" | jq -c '.content')
+
+        # Read current messages, append assistant turn and tool results
+        next_payload_file="$WORK_DIR/payloads/payload_${batch_id}_turn${tool_iteration}.json"
+        jq --argjson ac "$assistant_content" \
+           --argjson tr "$tool_results" \
+           '.messages = .messages + [{role: "assistant", content: $ac}, {role: "user", content: $tr}]' \
+           "$current_payload" > "$next_payload_file"
+
+        current_payload="$next_payload_file"
+        continue
+    fi
+
+    # Unexpected stop_reason — treat as final
+    log "BATCH_${batch_id}:UNEXPECTED_STOP:${stop_reason}"
+    echo "$response" > "$result_file"
+    rm -f "$WORK_DIR/payloads/payload_${batch_id}_turn"*.json 2>/dev/null
+    echo "BATCH_${batch_id}:SUCCESS"
+    exit 0
 done
 
-log "BATCH_${batch_id}:FAILED:MAX_RETRIES"
-echo "BATCH_${batch_id}:FAILED:MAX_RETRIES"
+# Loop exited via guard — save whatever we have
+if [ -n "${response:-}" ]; then
+    echo "$response" > "$result_file"
+    log "BATCH_${batch_id}:PARTIAL_SUCCESS:TURNS_${tool_iteration}"
+    echo "BATCH_${batch_id}:PARTIAL"
+    exit 0
+fi
+
+log "BATCH_${batch_id}:FAILED:NO_RESPONSE"
+echo "{\"batch_id\": $batch_id, \"status\": \"error\", \"error\": \"no_response\", \"turns\": $tool_iteration}" > "$error_file"
+echo "BATCH_${batch_id}:FAILED"
 exit 1
