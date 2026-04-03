@@ -345,6 +345,22 @@ while [ $attempt -lt $MAX_PUBLISH_RETRIES ]; do
             echo "$http_body" > "$result_file"
             new_key=$(echo "$http_body" | jq -r '.key')
             log "${risk_key}:SUCCESS:${new_key}"
+
+            # Attach assessment JSON to the ticket
+            if [ -f "$assessment_file" ]; then
+                attach_code=$(curl -s -o /dev/null -w "%{http_code}" \
+                    -X POST "$JIRA_BASE_URL/rest/api/3/issue/${new_key}/attachments" \
+                    -H "Authorization: Basic $JIRA_AUTH" \
+                    -H "X-Atlassian-Token: no-check" \
+                    -F "file=@${assessment_file}" \
+                    --max-time 30)
+                if [ "$attach_code" = "200" ]; then
+                    log "${risk_key}:ATTACHED:${assessment_file##*/}"
+                else
+                    log "${risk_key}:ATTACH_FAILED:HTTP_${attach_code}"
+                fi
+            fi
+
             echo "${risk_key}:SUCCESS:${new_key}"
             exit 0
             ;;
