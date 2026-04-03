@@ -8,8 +8,9 @@ Parse any flags or filters from $ARGUMENTS (everything after the `all` keyword):
 
 - `--force` — Set FORCE flag: skip quarterly review date filtering, review all risks regardless of last review date
 - `--reset` — Delete all progress and work files, start fresh (confirm with user first before deleting)
+- `--qtr:Q1` (or Q2, Q3, Q4) — Override the quarter for Review ticket summaries and labels (e.g., `--qtr:Q1` sets summary to "Review: 2026: Q1" and label to "Q1-Risk-Review")
 - Single category letter (T, C, F, A, B, D, ER, I, L, O, OO, P) — Set RR_CATEGORY_FILTER to that value
-- Default: no force, no category filter
+- Default: no force, no category filter, quarter auto-detected from current date
 
 ## Mode Selection
 
@@ -51,7 +52,7 @@ If `--reset` flag is set:
 Build the command with applicable flags and run via Bash tool in background:
 
 ```bash
-~/.claude/skills/rr/orchestrator/rr-batch.sh [--force] [--category X]
+~/.claude/skills/rr/orchestrator/rr-batch.sh [--force] [--category X] [--qtr:Q1|Q2|Q3|Q4]
 ```
 
 ### Report to User

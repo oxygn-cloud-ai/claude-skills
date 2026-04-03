@@ -48,6 +48,7 @@ SUBAGENT_MAX_RETRIES=3
 
 FORCE_MODE=false
 CATEGORY_FILTER="${RR_CATEGORY_FILTER:-}"
+QUARTER_OVERRIDE=""
 
 # Configurable model and API version
 MODEL="${RR_MODEL:-claude-sonnet-4-20250514}"
@@ -58,6 +59,7 @@ for arg in "$@"; do
     case $arg in
         --force) FORCE_MODE=true ;;
         --reset) rm -rf "$WORK_DIR"; echo "Work directory reset"; exit 0 ;;
+        --qtr:Q[1-4]) QUARTER_OVERRIDE="${arg#--qtr:}" ;;
     esac
 done
 
@@ -222,8 +224,9 @@ phase_filter() {
 
     if [ "$FORCE_MODE" = true ]; then
         log "Force mode: skipping quarterly filter"
-        cp "$WORK_DIR/discovery.json" "$WORK_DIR/filter-result.json"
-        jq '.risks | length' "$WORK_DIR/filter-result.json"
+        local count=$(jq '.risks | length' "$WORK_DIR/discovery.json")
+        jq --argjson tp "$count" '. + {to_process: $tp}' "$WORK_DIR/discovery.json" > "$WORK_DIR/filter-result.json"
+        echo "$count"
         return
     fi
 
@@ -424,8 +427,12 @@ phase_collection() {
 phase_publication() {
     log "PHASE 6: PUBLICATION"
 
+    # Clean stale results/errors from previous runs
+    rm -f "$WORK_DIR/jira-results"/*.json 2>/dev/null
+    rm -f "$WORK_DIR/jira-errors"/*.json 2>/dev/null
+
     # Export env vars needed by _publish_one.sh
-    export WORK_DIR JIRA_BASE_URL JIRA_AUTH PROJECT_KEY
+    export WORK_DIR JIRA_BASE_URL JIRA_AUTH PROJECT_KEY RR_QUARTER_OVERRIDE="$QUARTER_OVERRIDE"
 
     local risk_keys=$(ls "$WORK_DIR/individual" | sed 's/\.json//')
     local total=$(echo "$risk_keys" | wc -w | tr -d ' ')
@@ -453,10 +460,21 @@ phase_completion() {
     log "PHASE 7: COMPLETION"
 
     local total_risks=$(jq '.total' "$WORK_DIR/discovery.json")
-    local filtered=$(jq '.to_process' "$WORK_DIR/filter-result.json")
+    local filtered=$(jq '.to_process // .total' "$WORK_DIR/filter-result.json")
     local assessed=$(ls "$WORK_DIR/individual" 2>/dev/null | wc -l | tr -d ' ')
     local published=$(ls "$WORK_DIR/jira-results" 2>/dev/null | wc -l | tr -d ' ')
     local failed=$(ls "$WORK_DIR/jira-errors" 2>/dev/null | wc -l | tr -d ' ')
+
+    # Pre-compute failed risks list (avoids subshell issues in heredoc)
+    local failed_list=""
+    if [ "$failed" -gt 0 ]; then
+        failed_list=$(for f in "$WORK_DIR/jira-errors"/*.json; do
+            [ -f "$f" ] || continue
+            local key=$(basename "$f" .json)
+            local error=$(jq -r '.error // "unknown"' "$f" 2>/dev/null)
+            echo "- $key: $error"
+        done)
+    fi
 
     # Generate progress report
     cat > "$WORK_DIR/progress.md" << EOF
@@ -477,10 +495,7 @@ phase_completion() {
 
 ## Failed Risks
 
-$(ls "$WORK_DIR/jira-errors" 2>/dev/null | sed 's/\.json//' | while read key; do
-    error=$(jq -r '.error // "unknown"' "$WORK_DIR/jira-errors/${key}.json" 2>/dev/null)
-    echo "- $key: $error"
-done)
+$failed_list
 
 EOF
 

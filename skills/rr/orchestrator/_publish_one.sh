@@ -61,19 +61,23 @@ log "${risk_key}:PUBLISHING"
 today=$(date +%Y-%m-%d)
 month=$(date +%m)
 year=$(date +%Y)
-month_name=$(date +%b)
-day=$(date +%d)
 
-# Summary format: "Review: 2026, Apr 03"
-summary="Review: ${year}, ${month_name} ${day}"
+# Derive quarter from month
+case $month in
+    01|02|03) quarter="Q1" ;;
+    04|05|06) quarter="Q2" ;;
+    07|08|09) quarter="Q3" ;;
+    10|11|12) quarter="Q4" ;;
+esac
+
+# Allow override from env var (set by --qtr:Q1 flag in rr-batch.sh)
+quarter="${RR_QUARTER_OVERRIDE:-$quarter}"
+
+# Summary format: "Review: 2026: Q2"
+summary="Review: ${year}: ${quarter}"
 
 # Quarterly label
-case $month in
-    01|02|03) quarterly_label="Q1-Risk-Review" ;;
-    04|05|06) quarterly_label="Q2-Risk-Review" ;;
-    07|08|09) quarterly_label="Q3-Risk-Review" ;;
-    10|11|12) quarterly_label="Q4-Risk-Review" ;;
-esac
+quarterly_label="${quarter}-Risk-Review"
 
 #=============================================================================
 # IDEMPOTENCY CHECK — skip if same-day Review already exists
