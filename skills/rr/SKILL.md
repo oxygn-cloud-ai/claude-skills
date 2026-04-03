@@ -1,6 +1,6 @@
 ---
 name: rr
-version: 2.8.1
+version: 2.8.2
 description: "Risk register assessment for Chocolate Finance. Invoke with /rr followed by a ticket key (e.g. /rr RR-220) or /rr all for batch mode."
 user-invocable: true
 disable-model-invocation: true
@@ -12,136 +12,14 @@ argument-hint: [RR-NNN | all | status | monitor | fix | update | help | doctor |
 
 ## Subcommands
 
-Check $ARGUMENTS before proceeding. If it matches one of the following subcommands, execute that subcommand and stop.
+Check $ARGUMENTS before proceeding. If it matches one of the following subcommands, invoke the corresponding sub-skill via the Skill tool and stop.
 
-### help
-
-If $ARGUMENTS equals "help", "--help", or "-h", display the following usage guide and stop.
-
-```
-rr v2.8.1 — Risk Register Assessment
-
-USAGE
-  /rr RR-220           Review a specific risk (interactive 6-step workflow)
-  /rr all              Batch review all risks (parallel sub-agents)
-  /rr all --force      Batch all risks, ignore quarterly filter
-  /rr all T            Batch Technology risks only
-  /rr all --reset      Clear batch work directory
-  /rr status           Check batch progress (snapshot)
-  /rr monitor          Real-time batch progress monitor (live refresh)
-  /rr fix              Re-run failed assessments
-  /rr update           Update rr to latest version
-  /rr help             Display this usage guide
-  /rr doctor           Check environment health
-  /rr version          Show installed version
-
-MODES
-  Single Risk    /rr RR-NNN    Interactive 6-step workflow with user discussion
-  Batch Mode     /rr all       Autonomous parallel processing via sub-agents
-
-ENVIRONMENT VARIABLES
-  RR_OUTPUT_DIR         Output directory (default: ~/rr-output)
-  RR_WORK_DIR           Batch work directory (default: ~/rr-work)
-  ANTHROPIC_API_KEY     Required for batch parallel mode
-  JIRA_EMAIL            Required for batch mode Jira API
-  JIRA_API_KEY        Required for batch mode Jira API
-  SLACK_WEBHOOK_URL     Optional batch completion notification
-  RR_MODEL              Sub-agent model (default: claude-sonnet-4-20250514)
-
-WORKFLOW (Single Risk)
-  Step 1: Extract & Draft     Retrieve from Jira, initial assessment
-  Step 2: Adversarial Review  Challenge against 8 criteria
-  Step 3: Rectified Assessment Address challenges
-  Step 4: Discussion          Resolve uncertainties with user
-  Step 5: Final Assessment    User confirms before publishing
-  Step 6: Publish to Jira     Create Review child ticket
-
-LOCATION
-  ~/.claude/skills/rr/SKILL.md
-  ~/.claude/commands/rr/*.md (sub-commands)
-  ~/.claude/skills/rr/orchestrator/ (batch scripts)
-  ~/.claude/skills/rr/references/ (schemas, workflow, context)
-```
-
-End of help output. Do not continue.
-
-### doctor
-
-If $ARGUMENTS equals "doctor", "--doctor", or "check", run environment diagnostics and stop.
-
-**Checks:**
-1. Verify `curl` is available: `which curl`
-2. Verify `jq` is available: `which jq`
-3. Check env vars (report set/not set, **never display values**):
-   - `ANTHROPIC_API_KEY`
-   - `JIRA_EMAIL`
-   - `JIRA_API_KEY`
-4. Check reference files exist:
-   - `ls ~/.claude/skills/rr/references/schemas/enums.schema.json`
-   - `ls ~/.claude/skills/rr/references/business-context.md`
-   - `ls ~/.claude/skills/rr/references/jira-config.md`
-   - `ls ~/.claude/skills/rr/references/workflow/step-1-extract.md`
-   - `ls ~/.claude/skills/rr/references/workflow/step-2-adversarial.md`
-   - `ls ~/.claude/skills/rr/references/workflow/step-3-rectify.md`
-   - `ls ~/.claude/skills/rr/references/workflow/step-4-discussion.md`
-   - `ls ~/.claude/skills/rr/references/workflow/step-5-finalise.md`
-   - `ls ~/.claude/skills/rr/references/workflow/step-6-publish.md`
-5. Check orchestrator scripts exist:
-   - `ls ~/.claude/skills/rr/orchestrator/rr-batch.sh`
-   - `ls ~/.claude/skills/rr/orchestrator/retry.sh`
-6. Check sub-command files exist:
-   - `ls ~/.claude/commands/rr/*.md`
-7. Try Atlassian MCP connectivity: attempt `mcp__claude_ai_Atlassian__searchJiraIssuesUsingJql` with JQL `project = RR AND issuetype = Risk` limit 1
-
-Format:
-```
-rr doctor — Environment Health Check
-
-  [PASS] curl: /usr/bin/curl
-  [PASS] jq: /usr/local/bin/jq
-  [PASS] ANTHROPIC_API_KEY: set
-  [WARN] JIRA_EMAIL: not set
-  [WARN] JIRA_API_KEY: not set
-  [PASS] reference files: 9 files found
-  [PASS] orchestrator scripts: 2 files found
-  [PASS] sub-commands: 4 files in ~/.claude/commands/rr/
-  [PASS] Atlassian MCP: connected (1 result)
-  [PASS] version: 2.8.1
-
-  Result: N passed, N warnings, N failed
-```
-
-End of doctor output. Do not continue.
-
-### version
-
-If $ARGUMENTS equals "version", "--version", or "-v", output the version and stop.
-
-```
-rr v2.8.1
-```
-
-End of version output. Do not continue.
-
-### update
-
-If $ARGUMENTS equals "update", "--update", or "upgrade":
-
-1. Read the source repo path from `~/.claude/skills/rr/.source-repo`
-2. If found:
-   - Run `git -C <repo-path> pull` to update the repo
-   - Always run `bash <repo-path>/install.sh --force` (the per-skill installer, which updates SKILL.md, orchestrator scripts, reference files, sub-commands, and router)
-   - Report the installed version after install completes (read from the freshly installed `~/.claude/skills/rr/SKILL.md`)
-3. If `.source-repo` not found:
-   ```
-   rr update — source repo not configured.
-   Clone the repo and run install.sh to set up the source link:
-     git clone https://github.com/oxygn-cloud-ai/claude-skills.git
-     cd claude-skills/skills/rr
-     bash install.sh
-   ```
-
-End of update output. Do not continue.
+| Argument | Action |
+|----------|--------|
+| `help`, `--help`, `-h` | Invoke `/rr:help` |
+| `doctor`, `--doctor`, `check` | Invoke `/rr:doctor` |
+| `version`, `--version`, `-v` | Invoke `/rr:version` |
+| `update`, `--update`, `upgrade` | Invoke `/rr:update` |
 
 ---
 
@@ -163,18 +41,18 @@ Parse $ARGUMENTS and route:
 
 | Argument | Action |
 |----------|--------|
-| (empty) | Show help (same as `help` subcommand above) |
-| `help`, `--help`, `-h` | Show help (handled in Subcommands above) |
-| `doctor`, `--doctor`, `check` | Run diagnostics (handled in Subcommands above) |
-| `version`, `--version`, `-v` | Show version (handled in Subcommands above) |
-| `update` | Check for updates (handled in Subcommands above) |
-| Pattern matching `RR-\d+` (case-insensitive) | Invoke `/rr:review` via Skill tool, passing the full $ARGUMENTS |
-| `all` (with optional flags/filters after) | Invoke `/rr:all` via Skill tool, passing everything after `all` |
-| `status` | Invoke `/rr:status` via Skill tool |
-| `monitor` | Invoke `/rr:monitor` via Skill tool |
-| `fix` | Invoke `/rr:fix` via Skill tool |
-| `remove` | Invoke `/rr:remove` via Skill tool (hidden — testing only, deletes Review tickets) |
-| anything else | Show help |
+| (empty) | Invoke `/rr:help` |
+| `help`, `--help`, `-h` | Invoke `/rr:help` |
+| `doctor`, `--doctor`, `check` | Invoke `/rr:doctor` |
+| `version`, `--version`, `-v` | Invoke `/rr:version` |
+| `update`, `--update`, `upgrade` | Invoke `/rr:update` |
+| Pattern matching `RR-\d+` (case-insensitive) | Invoke `/rr:review` passing the full $ARGUMENTS |
+| `all` (with optional flags/filters after) | Invoke `/rr:all` passing everything after `all` |
+| `status` | Invoke `/rr:status` |
+| `monitor` | Invoke `/rr:monitor` |
+| `fix` | Invoke `/rr:fix` |
+| `remove` | Invoke `/rr:remove` (hidden — testing only) |
+| anything else | Invoke `/rr:help` |
 
 If the sub-command `.md` files exist in `~/.claude/commands/rr/`, invoke them via the Skill tool. Otherwise, execute the logic inline using the workflow overview below.
 

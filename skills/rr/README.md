@@ -191,7 +191,7 @@ Or from within Claude Code:
 
 ## Version
 
-Current: **2.8.1**
+Current: **2.8.2**
 
 ## Licence
 
