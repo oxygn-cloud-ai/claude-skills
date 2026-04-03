@@ -22,7 +22,6 @@ For each risk in the batch:
 2. **Self-adversarial review** — Challenge your own assessment against the 8 criteria below
 3. **Rectify** — Address every challenge found, correct or justify with evidence
 4. **Write progress** — Write a progress file immediately after completing each risk
-5. **Write individual** — Write the individual assessment file
 
 ### Progress File
 
@@ -44,26 +43,7 @@ Content:
 
 If assessment fails for a risk, write status `"error"` with an `"error_message"` field instead.
 
-### Individual Assessment File
-
-For each successfully assessed risk, use the Write tool to create:
-`{{WORK_DIR}}/individual/<risk_key>.json`
-
-Content: the WRAPPER object matching the entry in the assessments array — NOT the raw assessment schema. Format:
-```json
-{
-  "risk_key": "RR-NNN",
-  "status": "success",
-  "assessment": { "...full assessment with metadata + sections..." },
-  "adversarial_summary": {
-    "challenges_raised": 3,
-    "challenges_resolved": 3,
-    "unresolved_issues": []
-  }
-}
-```
-
-This is critical — `_publish_one.sh` reads `.assessment` from this file to render the Jira ticket.
+**Do NOT write individual assessment files** — Phase 5 (rr-finalize.sh) extracts them from the batch result file. This ensures the monitor dashboard can show "in progress" status while assessments are underway.
 
 ## Final Result
 

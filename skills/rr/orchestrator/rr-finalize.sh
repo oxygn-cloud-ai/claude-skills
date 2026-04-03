@@ -106,8 +106,7 @@ phase_collection() {
 
         echo "$content" > "$WORK_DIR/assessments/batch_${batch_id}.json"
 
-        # Validate individual assessments — agents write individual/ files directly,
-        # but we verify and fill gaps from the result file as fallback
+        # Extract individual assessments from batch result
         local count=$(echo "$content" | jq '.assessments | length')
         for ((i=0; i<count; i++)); do
             local assessment=$(echo "$content" | jq ".assessments[$i]")
@@ -117,11 +116,7 @@ phase_collection() {
             total=$((total + 1))
 
             if [ "$status" = "success" ]; then
-                # Write individual file only if agent didn't already create it
-                if [ ! -f "$WORK_DIR/individual/${risk_key}.json" ]; then
-                    log "Batch $batch_id: filling gap for $risk_key (not written by agent)"
-                    echo "$assessment" > "$WORK_DIR/individual/${risk_key}.json"
-                fi
+                echo "$assessment" > "$WORK_DIR/individual/${risk_key}.json"
                 valid=$((valid + 1))
             fi
         done

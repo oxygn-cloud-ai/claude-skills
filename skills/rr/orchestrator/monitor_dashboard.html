@@ -427,11 +427,11 @@ function calcProgress(data) {
   if (p === 4) {
     const r = data.counts.results;
     const b = Math.max(data.counts.extracts, 1);
-    const ind = data.counts.individual;
-    // Blend: 60% batch completion + 40% individual risk progress
+    const prog = (data.risks.counts.in_progress || 0);
+    // Blend: 50% batch completion + 50% per-risk progress reports
     const batchPct = r / b;
-    const riskPct = ind / tp;
-    return 30 + Math.round(20 * (batchPct * 0.6 + riskPct * 0.4));
+    const riskPct = prog / tp;
+    return 30 + Math.round(20 * (batchPct * 0.5 + riskPct * 0.5));
   }
   if (p === 5) {
     const done = data.counts.individual;

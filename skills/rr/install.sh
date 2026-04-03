@@ -278,7 +278,8 @@ for file in "${COMMANDS_SOURCE}"/*.md; do
 done
 ok "Sub-commands: ${count} files -> ${COMMANDS_TARGET}/"
 
-# 5. Install orchestrator scripts
+# 5. Install orchestrator scripts (clean first to remove stale files from previous versions)
+rm -rf "${SKILL_TARGET}/orchestrator"
 mkdir -p "${SKILL_TARGET}/orchestrator"
 orch_count=0
 for file in "${ORCHESTRATOR_SOURCE}"/*; do
