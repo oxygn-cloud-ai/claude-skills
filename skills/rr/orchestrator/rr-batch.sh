@@ -36,7 +36,7 @@ LOG_FILE="$WORK_DIR/batch.log"
 # Resolve the directory this script lives in (follows symlinks)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-JIRA_BASE_URL="https://chocolatefinance.atlassian.net"
+JIRA_BASE_URL="https://chocfin.atlassian.net"
 JIRA_CLOUD_ID="81a55da4-28c8-4a49-8a47-03a98a73f152"
 PROJECT_KEY="RR"
 

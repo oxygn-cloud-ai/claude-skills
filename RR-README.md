@@ -86,7 +86,7 @@ If `ANTHROPIC_API_KEY` is not set or the orchestrator scripts are missing, batch
 |------------|-------------|----------------|
 | Claude Code CLI | `claude --version` | [docs.anthropic.com](https://docs.anthropic.com/en/docs/claude-code) |
 | Atlassian MCP integration | `/rr doctor` (checks MCP connectivity) | Connect via Claude Code settings or [claude.ai](https://claude.ai) integrations |
-| Access to Jira project RR | Verify in Jira: your-instance.atlassian.net | Request from Jira admin |
+| Access to Jira project RR | Verify in Jira: chocfin.atlassian.net | Request from Jira admin |
 | `curl` | `which curl` | Pre-installed on macOS |
 | `bash` 3.2+ | `bash --version` | Pre-installed on macOS |
 
@@ -361,7 +361,7 @@ These values are hard-coded in the reference files and orchestrator scripts:
 
 | Setting | Value |
 |---------|-------|
-| Jira Instance | your-instance.atlassian.net |
+| Jira Instance | chocfin.atlassian.net |
 | Cloud ID | `81a55da4-28c8-4a49-8a47-03a98a73f152` |
 | Project Key | `RR` |
 | Risk Issue Type ID | `12724` |

@@ -259,7 +259,7 @@ curl -s -X POST \
   -u "${JIRA_EMAIL}:${JIRA_API_TOKEN}" \
   -H "X-Atlassian-Token: no-check" \
   -F "file=@${RR_OUTPUT_DIR}/<filename>" \
-  "https://chocolatefinance.atlassian.net/rest/api/3/issue/<review-ticket-key>/attachments"
+  "https://chocfin.atlassian.net/rest/api/3/issue/<review-ticket-key>/attachments"
 ```
 
 If files exceed size limits, inform the user which files require manual attachment.

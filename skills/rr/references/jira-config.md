@@ -177,7 +177,7 @@ curl -s -X POST \
   -F "file=@${RR_OUTPUT_DIR}/<key>_<date>_assessment_2.json" \
   -F "file=@${RR_OUTPUT_DIR}/<key>_<date>_discussion.json" \
   -F "file=@${RR_OUTPUT_DIR}/<key>_<date>_assessment_final.json" \
-  "https://chocolatefinance.atlassian.net/rest/api/3/issue/<review-ticket-key>/attachments"
+  "https://chocfin.atlassian.net/rest/api/3/issue/<review-ticket-key>/attachments"
 ```
 
 Requires `JIRA_EMAIL` and `JIRA_API_TOKEN` environment variables.
