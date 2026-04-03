@@ -115,15 +115,19 @@ notify_slack() {
 jira_search() {
     local jql="$1"
     local max_results="${2:-100}"
-    local start_at="${3:-0}"
+    local next_page_token="${3:-}"
     local payload
     payload=$(jq -n \
         --arg jql "$jql" \
         --argjson max "$max_results" \
-        --argjson start "$start_at" \
-        '{jql: $jql, maxResults: $max, startAt: $start, fields: ["summary", "description", "issuetype", "status", "parent", "created"]}')
+        '{jql: $jql, maxResults: $max, fields: ["summary", "description", "issuetype", "status", "parent", "created"]}')
 
-    curl -s -X POST "$JIRA_BASE_URL/rest/api/3/search" \
+    # Add cursor pagination token if provided
+    if [ -n "$next_page_token" ]; then
+        payload=$(echo "$payload" | jq --arg token "$next_page_token" '. + {nextPageToken: $token}')
+    fi
+
+    curl -s -X POST "$JIRA_BASE_URL/rest/api/3/search/jql" \
         -H "Authorization: Basic $JIRA_AUTH" \
         -H "Content-Type: application/json" \
         -d "$payload" \
@@ -151,29 +155,33 @@ phase_discovery() {
     [ -n "$CATEGORY_FILTER" ] && jql="project = $PROJECT_KEY AND issuetype = Risk AND summary ~ \"[$CATEGORY_FILTER]\" ORDER BY key ASC"
 
     local all_risks="[]"
-    local start_at=0
-    local total=0
+    local next_page_token=""
+    local page=0
 
     while true; do
-        log "Fetching risks starting at $start_at..."
-        local response=$(jira_search "$jql" 100 $start_at)
+        page=$((page + 1))
+        log "Fetching risks (page $page)..."
+        local response=$(jira_search "$jql" 100 "$next_page_token")
 
         if [ -z "$response" ] || ! echo "$response" | jq -e '.issues' >/dev/null 2>&1; then
             die "Failed to query Jira"
         fi
 
-        local batch_total=$(echo "$response" | jq '.total')
         local batch_count=$(echo "$response" | jq '.issues | length')
-
-        if [ "$start_at" -eq 0 ]; then
-            total=$batch_total
-            log "Total risks in register: $total"
-        fi
+        log "Page $page: $batch_count risks"
 
         all_risks=$(echo "$all_risks" "$response" | jq -s '.[0] + .[1].issues')
 
-        start_at=$((start_at + batch_count))
-        [ $start_at -ge $total ] && break
+        # Cursor-based pagination: check isLast and nextPageToken
+        local is_last=$(echo "$response" | jq -r '.isLast // true')
+        if [ "$is_last" = "true" ]; then
+            break
+        fi
+
+        next_page_token=$(echo "$response" | jq -r '.nextPageToken // empty')
+        if [ -z "$next_page_token" ]; then
+            break
+        fi
     done
 
     local risk_count=$(echo "$all_risks" | jq 'length')
@@ -222,12 +230,24 @@ phase_filter() {
         return
     fi
 
-    # Query for existing reviews this quarter
+    # Query for existing reviews this quarter (cursor-paginated)
     local jql="project = $PROJECT_KEY AND issuetype = Review AND created >= $quarter_start"
-    local reviews_response=$(jira_search "$jql" 1000 0)
+    local all_reviews="[]"
+    local next_page_token=""
+    while true; do
+        local reviews_response=$(jira_search "$jql" 100 "$next_page_token")
+        if [ -z "$reviews_response" ] || ! echo "$reviews_response" | jq -e '.issues' >/dev/null 2>&1; then
+            break
+        fi
+        all_reviews=$(echo "$all_reviews" "$reviews_response" | jq -s '.[0] + .[1].issues')
+        local is_last=$(echo "$reviews_response" | jq -r '.isLast // true')
+        [ "$is_last" = "true" ] && break
+        next_page_token=$(echo "$reviews_response" | jq -r '.nextPageToken // empty')
+        [ -z "$next_page_token" ] && break
+    done
 
     # Extract parent keys of existing reviews
-    local reviewed_parents=$(echo "$reviews_response" | jq -r '[.issues[].fields.parent.key // empty] | unique | .[]')
+    local reviewed_parents=$(echo "$all_reviews" | jq -r '[.[].fields.parent.key // empty] | unique | .[]')
 
     # Filter out already-reviewed risks
     local reviewed_count=0
