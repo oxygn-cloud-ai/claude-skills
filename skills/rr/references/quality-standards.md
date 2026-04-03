@@ -32,7 +32,7 @@ Rules, constraints, and operational requirements for all assessments.
 
 5. **Do not use a risk rating** that does not follow the matrix defined in the schema.
 
-6. **Do not proceed past Step 4** without user confirmation of the final assessment.
+6. **Do not proceed past Step 5** without user confirmation of the final assessment.
 
 ---
 

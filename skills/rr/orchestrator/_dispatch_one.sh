@@ -144,7 +144,8 @@ while [ $attempt -lt $MAX_RETRIES ]; do
         400)
             # Bad request - don't retry
             log "BATCH_${batch_id}:FAILED:BAD_REQUEST"
-            echo "{\"batch_id\": $batch_id, \"status\": \"error\", \"error\": \"bad_request\", \"response\": $(echo "$http_body" | jq -c '.' 2>/dev/null || echo "\"$http_body\"")}" > "$error_file"
+            jq -n --argjson id "$batch_id" --arg body "$http_body" '{batch_id: $id, status: "error", error: "bad_request", response: $body}' > "$error_file" 2>/dev/null || \
+                echo "{\"batch_id\": $batch_id, \"status\": \"error\", \"error\": \"bad_request\", \"response\": \"parse_error\"}" > "$error_file"
             echo "BATCH_${batch_id}:FAILED:BAD_REQUEST"
             exit 1
             ;;

@@ -21,6 +21,12 @@ RETRY_DELAY=30
 MODEL="${RR_MODEL:-claude-sonnet-4-20250514}"
 API_VERSION="${ANTHROPIC_API_VERSION:-2023-06-01}"
 
+# Verify API key is set
+if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
+    echo "ERROR: ANTHROPIC_API_KEY not set"
+    exit 1
+fi
+
 : > "$RETRY_LOG"
 
 log() {
