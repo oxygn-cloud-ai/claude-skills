@@ -1,6 +1,6 @@
 ---
 name: chk1
-version: 2.0.0
+version: 2.1.0
 description: Adversarial Implementation Audit Mandate. Use when auditing recently implemented changes for bugs, risks, omissions, deviations, and unintended modifications. Fault-finding audit, not validation.
 user-invocable: true
 disable-model-invocation: true
@@ -19,7 +19,7 @@ Check $ARGUMENTS before proceeding. If it matches one of the following subcomman
 If $ARGUMENTS equals "help", "--help", or "-h", display the following usage guide and stop.
 
 ```
-chk1 v2.0.0 — Adversarial Implementation Audit
+chk1 v2.1.0 — Adversarial Implementation Audit
 
 USAGE
   /chk1                     Full audit (auto-detects recent changes)
@@ -103,7 +103,7 @@ If any check is FAIL, advise the user on how to fix it. End of doctor output. Do
 If $ARGUMENTS equals "version", "--version", or "-v", output:
 
 ```
-chk1 v2.0.0
+chk1 v2.1.0
 ```
 
 End of version output. Do not continue.
@@ -215,6 +215,9 @@ For each individual change, explicitly verify and either confirm or refute the f
 - All edge cases are handled, including null values, empty states, boundary conditions, and invalid inputs
 - Error handling exists, is reachable, and is appropriate
 - Data flows correctly between components, layers, and services without loss, mutation, or inconsistency
+- Cross-component data format compatibility: where one component writes output that another reads, verify the exact format matches (JSON field names, nesting structure, wrapper vs raw objects). Trace jq paths, JSON.parse expectations, and struct field accesses across the boundary.
+- Environment variable chain completeness: where a parent process spawns child processes, verify every variable the child reads (via `$VAR`, `${VAR}`, `${VAR:-default}`, `${VAR:?error}`) is explicitly exported by the parent. Unexported variables silently disappear across process boundaries.
+- Re-run safety: verify that re-executing the same operation (re-running a script, re-deploying, re-installing) does not leave stale artefacts from the previous run. Scripts that create files must clean previous outputs first, or use atomic replacement. Install scripts that copy files to a target must remove the target directory first if files were deleted from the source.
 
 Failure to explicitly verify any item must be treated as a defect.
 
@@ -230,6 +233,9 @@ Actively and exhaustively search for the following classes of defects:
 - Resource leaks including memory, file handles, database connections, or listeners
 - Hardcoded values that should be configurable or parameterised
 - Missing null, undefined, or bounds checks
+- Dangling references to deleted or renamed files (grep for old filenames across all modified and adjacent files, including README, docs, comments, install scripts, and health checks)
+- Stale directory contents: if files were deleted from a source directory, verify that install/deploy scripts clean the target before copying (additive copy leaves orphaned files from previous versions)
+- Dead code from status/priority chain analysis: for any if-elif chain or priority ordering, verify every branch is reachable under realistic runtime conditions (a state that is always shadowed by an earlier condition is dead code)
 
 Assume bugs exist. Prove otherwise.
 
@@ -243,6 +249,8 @@ Identify, classify, and escalate any of the following risks. Absence of findings
 - Breaking changes to existing behaviour, APIs, contracts, or data
 - Missing, insufficient, or bypassable user input validation
 - Unhandled promise rejections, uncaught exceptions, or silent failures
+- Feature nullification through architectural change: when a feature depends on timing assumptions (e.g., a status is visible because file A is written minutes before file B), verify those timing assumptions still hold after the changes. A refactor that moves both writes into the same synchronous path can silently make the feature unobservable.
+- Observability gaps: for any monitoring, dashboard, or status system, verify that every state it displays is actually reachable in the current architecture. Walk through the poll interval vs write timing to confirm users can actually see transient states.
 
 Each identified risk must include severity and remediation guidance.
 
