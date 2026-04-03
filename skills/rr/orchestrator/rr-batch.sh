@@ -390,7 +390,8 @@ phase_collection() {
         [ -f "$result_file" ] || continue
 
         local batch_id=$(basename "$result_file" | sed 's/result_//;s/\.json//')
-        local content=$(jq -r '.content[0].text // empty' "$result_file" 2>/dev/null)
+        local content=$(jq -r '.content[0].text // empty' "$result_file" 2>/dev/null \
+            | sed 's/^```json[[:space:]]*//' | sed 's/^```[[:space:]]*//' | sed 's/[[:space:]]*```$//')
 
         if [ -z "$content" ] || ! echo "$content" | jq -e '.assessments' >/dev/null 2>&1; then
             log "Batch $batch_id: invalid response"
