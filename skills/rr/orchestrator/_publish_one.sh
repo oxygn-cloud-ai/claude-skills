@@ -1,12 +1,15 @@
 #!/bin/bash
-# _publish_one.sh — Standalone wrapper for publishing a single review to Jira
+# _publish_one.sh — Publish a single risk assessment as a Jira Review ticket
 #
-# Replaces the export -f publish_review pattern for macOS compatibility.
-# Called by rr-batch.sh via xargs -P.
+# Reads the full assessment from individual/<risk_key>.json, renders all 8
+# sections to markdown, and creates a Review child ticket with proper labels,
+# dates, assignee, and summary format per step-6-publish.md spec.
 #
 # Features:
+#   - Full assessment rendering (all 8 sections, not just context)
 #   - Idempotency: checks for existing same-day Review before creating
 #   - Retry with exponential backoff on 429/503/529
+#   - Proper Jira fields: labels, dates, assignee, contentFormat: markdown
 #
 # Usage: _publish_one.sh <risk_key>
 #
@@ -27,6 +30,7 @@ JIRA_AUTH="${JIRA_AUTH:?JIRA_AUTH must be set}"
 PROJECT_KEY="${PROJECT_KEY:?PROJECT_KEY must be set}"
 
 MAX_PUBLISH_RETRIES=3
+ASSIGNEE_ID="712020:fd08a63d-8c2c-4412-8761-834339d9475c"
 
 # File paths
 assessment_file="$WORK_DIR/individual/${risk_key}.json"
@@ -51,10 +55,30 @@ fi
 log "${risk_key}:PUBLISHING"
 
 #=============================================================================
-# IDEMPOTENCY CHECK — skip if same-day Review already exists
+# DATE AND LABEL COMPUTATION
 #=============================================================================
 
 today=$(date +%Y-%m-%d)
+month=$(date +%m)
+year=$(date +%Y)
+month_name=$(date +%b)
+day=$(date +%d)
+
+# Summary format: "Review: 2026, Apr 03"
+summary="Review: ${year}, ${month_name} ${day}"
+
+# Quarterly label
+case $month in
+    01|02|03) quarterly_label="Q1-Risk-Review" ;;
+    04|05|06) quarterly_label="Q2-Risk-Review" ;;
+    07|08|09) quarterly_label="Q3-Risk-Review" ;;
+    10|11|12) quarterly_label="Q4-Risk-Review" ;;
+esac
+
+#=============================================================================
+# IDEMPOTENCY CHECK — skip if same-day Review already exists
+#=============================================================================
+
 check_jql="project = $PROJECT_KEY AND parent = $risk_key AND issuetype = Review AND summary ~ \"$today\""
 check_payload=$(jq -n --arg jql "$check_jql" '{jql: $jql, maxResults: 1, fields: ["summary"]}')
 
@@ -70,43 +94,115 @@ if [ "$existing_count" -gt 0 ]; then
     existing_key=$(echo "$existing_response" | jq -r '.issues[0].key')
     log "${risk_key}:SKIP:ALREADY_REVIEWED:${existing_key}"
     echo "${risk_key}:SKIP:ALREADY_REVIEWED:${existing_key}"
-    # Save to results (not errors) — this is a successful outcome
     echo "$existing_response" > "$result_file"
     exit 0
 fi
 
 #=============================================================================
-# BUILD JIRA PAYLOAD
+# RENDER FULL ASSESSMENT TO MARKDOWN
 #=============================================================================
 
-# Extract Jira description from assessment
-jira_desc=$(jq -r '.jira_description // .assessment.sections.context.narrative // "Assessment completed"' "$assessment_file")
-summary="Risk Review -- $today"
+# Use jq to render all 8 sections into markdown matching step-6-publish.md template
+rendered_md=$(jq -r '
+    .assessment as $a |
+    $a.sections as $s |
 
-# Create ADF description
-adf_desc=$(jq -n --arg text "$jira_desc" '{
-    type: "doc",
-    version: 1,
-    content: [{
-        type: "paragraph",
-        content: [{type: "text", text: $text}]
-    }]
-}')
+    "## Risk Assessment: \($s.header.risk_id) — \($s.header.risk_name)\n" +
+    "\n**Risk Statement:** \($s.header.risk_statement // "N/A")\n" +
+    "\n**Risk Category:** \($s.header.risk_category_name // $s.header.risk_category // "N/A")\n" +
+    "\n**Assessment Date:** \($a.metadata.assessment_date // "N/A")\n" +
+    "\n---\n" +
 
-# Build Jira payload
+    "\n### Context\n\n" +
+    "\($s.context.narrative // "N/A")\n\n" +
+    "**Business Relevance:**\n" +
+    ([$s.context.business_relevance[]? // empty] | map("- " + .) | join("\n")) +
+    "\n\n**Materiality:** \($s.context.materiality_rationale // "N/A")\n" +
+    "\n---\n" +
+
+    "\n### Applicable Regulatory Framework\n\n" +
+    ([$s.regulatory_framework[]? // empty] | to_entries | map(
+        "\(.value | (.key + 1 | tostring) // (.key | tostring)). **\(.value.instrument_name // "Unknown")** (\(.value.version_date // "N/A"), \(.value.status // "N/A"))\n   \(.value.relevance // "N/A")"
+    ) | join("\n")) +
+    "\n\n---\n" +
+
+    "\n### Inherent Risk Assessment\n\n" +
+    "| Dimension | Rating | Rationale |\n" +
+    "|-----------|--------|----------|\n" +
+    "| Likelihood | \($s.inherent_risk.likelihood // "N/A") | \($s.inherent_risk.likelihood_rationale // "N/A") |\n" +
+    "| Impact | \($s.inherent_risk.impact // "N/A") | \($s.inherent_risk.impact_rationale // "N/A") |\n" +
+    "| **Rating** | **\($s.inherent_risk.rating // "N/A")** | |\n" +
+    "\n---\n" +
+
+    "\n### Existing Controls\n\n" +
+    ([$s.existing_controls[]? // empty] | map(
+        "**\(.id // "C?"): \(.description // "N/A")**\n" +
+        "- Type: \(.control_type // "N/A")\n" +
+        "- Effectiveness: \(.effectiveness // "N/A")\n" +
+        (if .effectiveness_rationale then "- \(.effectiveness_rationale)\n" else "" end) +
+        (if .gaps and (.gaps | length) > 0 then "- Gaps: " + (.gaps | join(", ")) + "\n" else "" end)
+    ) | join("\n")) +
+    "\n\n---\n" +
+
+    "\n### Residual Risk Assessment\n\n" +
+    "| Dimension | Rating | Rationale |\n" +
+    "|-----------|--------|----------|\n" +
+    "| Likelihood | \($s.residual_risk.likelihood // "N/A") | \($s.residual_risk.likelihood_rationale // "N/A") |\n" +
+    "| Impact | \($s.residual_risk.impact // "N/A") | \($s.residual_risk.impact_rationale // "N/A") |\n" +
+    "| **Rating** | **\($s.residual_risk.rating // "N/A")** | |\n\n" +
+    "\($s.residual_risk.control_effect_summary // "")\n" +
+    "\n---\n" +
+
+    "\n### Recommendations\n\n" +
+    ([$s.recommendations[]? // empty] | map(
+        "**\(.id // "R?"): \(.action // "N/A")**\n" +
+        "- Priority: \(.priority // "N/A")\n" +
+        "- Regulatory Basis: \(.regulatory_basis // "N/A")\n" +
+        (if .suggested_owner then "- Suggested Owner: \(.suggested_owner)\n" else "" end)
+    ) | join("\n")) +
+    "\n\n---\n" +
+
+    "\n### Evidences\n\n" +
+    "**Sources Used:**\n" +
+    ([$s.evidences.sources_used[]? // empty] | map("- \(.description // "N/A")") | join("\n")) +
+    "\n\n**Sources Unavailable:**\n" +
+    ([$s.evidences.sources_unavailable[]? // empty] | map("- " + .) | join("\n")) +
+    "\n\n**Caveats:**\n" +
+    ([$s.evidences.caveats[]? // empty] | map("- " + .) | join("\n"))
+' "$assessment_file" 2>/dev/null)
+
+if [ -z "$rendered_md" ]; then
+    log "${risk_key}:ERROR:RENDER_FAILED"
+    # Fallback to context narrative
+    rendered_md=$(jq -r '.assessment.sections.context.narrative // "Assessment render failed"' "$assessment_file")
+fi
+
+#=============================================================================
+# BUILD JIRA PAYLOAD — with all required fields
+#=============================================================================
+
 payload=$(jq -n \
     --arg project "$PROJECT_KEY" \
     --arg parent "$risk_key" \
     --arg summary "$summary" \
-    --argjson desc "$adf_desc" \
+    --arg desc "$rendered_md" \
+    --arg assignee "$ASSIGNEE_ID" \
+    --arg duedate "$today" \
+    --arg startdate "$today" \
+    --arg label "$quarterly_label" \
     '{
         fields: {
             project: {key: $project},
             issuetype: {name: "Review"},
             parent: {key: $parent},
             summary: $summary,
-            description: $desc
-        }
+            description: $desc,
+            assignee: {accountId: $assignee},
+            duedate: $duedate,
+            customfield_10015: $startdate,
+            labels: [$label]
+        },
+        update: {}
     }')
 
 #=============================================================================
@@ -135,14 +231,12 @@ while [ $attempt -lt $MAX_PUBLISH_RETRIES ]; do
             exit 0
             ;;
         429|503|529)
-            # Rate limited or overloaded — backoff and retry
             sleep_time=$((attempt * 10))
             log "${risk_key}:HTTP_${http_code}:RETRY_${attempt}:SLEEPING_${sleep_time}s"
             sleep "$sleep_time"
             continue
             ;;
         *)
-            # Permanent failure — don't retry
             jq -n --arg code "http_$http_code" --arg body "$http_body" '{error: $code, response: $body}' > "$error_file" 2>/dev/null || \
                 echo "{\"error\": \"http_$http_code\", \"response\": \"parse_error\"}" > "$error_file"
             log "${risk_key}:FAILED:HTTP_$http_code"
